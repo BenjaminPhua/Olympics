@@ -1,4 +1,3 @@
-//COMMIT 4
 package usyd.it.olympics;
 
 import java.io.FileInputStream;
