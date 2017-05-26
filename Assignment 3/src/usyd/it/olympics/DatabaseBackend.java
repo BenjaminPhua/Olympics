@@ -54,29 +54,37 @@ public class DatabaseBackend {
      * @return true if username is for a valid memberID and password is correct
      * @throws OlympicsDBException 
      * @throws SQLException
-     */
-    public HashMap<String,Object> checkLogin(String member, char[] password) throws OlympicsDBException  {
+     */	
+	    public HashMap<String,Object> checkLogin(String member, char[] password) throws OlympicsDBException  {
         HashMap<String,Object> details = null;
+        Statement stmt = null;
         try {
             Connection conn = getConnection();
-        	
-	        // FIXME: REPLACE FOLLOWING LINES WITH REAL OPERATION
+			   // FIXME: REPLACE FOLLOWING LINES WITH REAL OPERATION
 	        // Don't forget you have memberID variables memberUser available to
 	        // use in a query.
 	        // Query whether login (memberID, password) is correct...
-            boolean valid = (member.equals("testuser") && new String(password).equals("testpass"));
-            if (valid) {
-            	details = new HashMap<String,Object>();
-
-    	        // Populate with record data
-            	details.put("member_id", member);
-            	details.put("title", "Mr");
-            	details.put("first_name", "Potato");
-            	details.put("family_name", "Head");
-            	details.put("country_name", "Australia");
-            	details.put("residence", "SIT");
-            	details.put("member_type", "athlete");
-            }
+            stmt = conn.createStatement();
+            ResultSet rset = stmt.executeQuery("SELECT * FROM olympics.member WHERE member_id='"+member+"';");
+        	while(rset.next()){
+        		boolean valid = (member.equals(rset.getString("member_id")) && new String(password).equals(rset.getString("pass_word")));
+        		if (valid) {
+        			System.out.println(rset.getString(2) + "  " + rset.getString(4)+ " " + rset.getString(3));
+        			String title = rset.getString(2);
+        			String first_name = rset.getString(4);
+        			String family_name = rset.getString(3);
+        			
+        			details = new HashMap<String,Object>();
+        			// Populate with record data
+        			details.put("member_id", member);
+        			details.put("title", title);
+        			details.put("first_name", first_name);
+        			details.put("family_name", family_name);
+        			details.put("country_name", "Australia");
+        			details.put("residence", "SIT");
+        			details.put("member_type", "athlete");
+        		}
+        	};
         } catch (Exception e) {
             throw new OlympicsDBException("Error checking login details", e);
         }
