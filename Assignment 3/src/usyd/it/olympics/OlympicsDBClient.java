@@ -1,5 +1,5 @@
 package usyd.it.olympics;
-
+//testDB
 import java.io.FileInputStream;
 import java.util.ArrayList;
 import java.util.Date;
@@ -32,6 +32,7 @@ public class OlympicsDBClient {
         setMessage("Welcome to Olympics DB Client.");
     }
 
+    //test DB
     private void setMessage(String msg) {
         gui.setStatus(msg);
     }
