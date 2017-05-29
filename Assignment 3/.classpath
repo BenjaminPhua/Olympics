@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="Assignment 3/src"/>
+	<classpathentry kind="lib" path="Assignment 3/lib/ojdbc7.jar"/>
+	<classpathentry kind="lib" path="Assignment 3/lib/postgresql-42.0.0.jre7.jar"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="output" path="Assignment 3/bin"/>
+</classpath>
