@@ -144,24 +144,29 @@ public class DatabaseBackend {
         // FIXME: Replace the following with REAL OPERATIONS!
 
         ArrayList<HashMap<String, Object>> events = new ArrayList<>();
-        
-        HashMap<String,Object> event1 = new HashMap<String,Object>();
-        event1.put("event_id", Integer.valueOf(123));
-        event1.put("sport_id", Integer.valueOf(3));
-        event1.put("event_name", "Women's 5km Egg & Spoon");
-        event1.put("event_gender", "W");
-        event1.put("sport_venue", "ANZ Stadium");
-        event1.put("event_start", new Date());
-        events.add(event1);
-        
-        HashMap<String,Object> event2 = new HashMap<String,Object>();
-        event2.put("event_id", Integer.valueOf(123));
-        event2.put("sport_id", Integer.valueOf(3));
-        event2.put("event_name", "Men's 40km Cross-country Hopping");
-        event2.put("event_gender", "M");
-        event2.put("sport_venue", "Bennelong Point");
-        event2.put("event_start", new Date());
-        events.add(event2);
+
+        Statement stmt = null;
+        try {
+            Connection conn = getConnection();
+            stmt = conn.createStatement();
+            ResultSet rset = stmt.executeQuery(
+                    "SELECT * " +
+                    "FROM olympics.event " +
+                    "WHERE sport_id = '" + sportname + "';"
+            );
+            while (rset.next()) {
+                HashMap<String,Object> event = new HashMap<>();
+                event.put("event_id", rset.getInt("event_id"));
+                event.put("sport_id", rset.getInt("sport_id"));
+                event.put("event_name", rset.getString("event_name"));
+                event.put("event_gender", rset.getString("event_gender"));
+                event.put("sport_venue", rset.getInt("sport_venue"));
+                event.put("event_start", rset.getTimestamp("event_start"));
+                events.add(event);
+            }
+        } catch (Exception e) {
+            throw new OlympicsDBException("Error getting events of this sport", e);
+        }
 
         return events;
     }
@@ -176,31 +181,25 @@ public class DatabaseBackend {
         // FIXME: Replace the following with REAL OPERATIONS!
 
     	ArrayList<HashMap<String, Object>> results = new ArrayList<>();
+        Statement stmt = null;
+        try {
+            Connection conn = getConnection();
+            stmt = conn.createStatement();
 
-    	
-        HashMap<String,Object> result1 = new HashMap<String,Object>();
-        result1.put("participant", "The Frog, Kermit");
-        result1.put("country_name", "Fraggle Rock");
-        result1.put("medal", "Gold");
-        results.add(result1);
-        
-        HashMap<String,Object> result2 = new HashMap<String,Object>();
-        result2.put("participant", "Cirus, Miley");
-        result2.put("country_name", "United States");
-        result2.put("medal", "Silver");
-        results.add(result2);
-        
-        HashMap<String,Object> result3 = new HashMap<String,Object>();
-        result3.put("participant", "Bond, James");
-        result3.put("country_name", "Great Britain");
-        result3.put("medal", "Bronze");
-        results.add(result3);
-
-        HashMap<String,Object> result4 = new HashMap<String,Object>();
-        result4.put("participant", "McKenzie, Namor");
-        result4.put("country_name", "Atlantis");
-        result4.put("medal", null);
-        results.add(result4);
+            ResultSet rset = stmt.executeQuery(
+                    "SELECT * " +
+                    "FROM olympics.participates JOIN olympics.member WHERE (athlete_id = member_id) " +
+                    "WHERE event_id = '" + eventId + "';");
+            while (rset.next()) {
+                HashMap<String,Object> result = new HashMap<>();
+                result.put("participant", rset.getString("family_name") + " " + rset.getString("given_names"));
+                result.put("country_name", rset.getString("country_code"));
+                result.put("medal", rset.getString("medal_character"));
+                results.add(result);
+            }
+        } catch (Exception e) {
+            throw new OlympicsDBException("Error getting results of this event", e);
+        }
 
         return results;
     }
@@ -234,7 +233,14 @@ public class DatabaseBackend {
     
     ArrayList<HashMap<String,Object>> getMemberBookings(String memberID) throws OlympicsDBException {
         ArrayList<HashMap<String,Object>> bookings = new ArrayList<HashMap<String,Object>>();
-        
+        Statement stmt = null;
+        try {
+            Connection conn = getConnection();
+            stmt = conn.createStatement();
+            ResultSet rset = stmt.queryexecute(
+                    "SELECT * " +
+                    "FROM olympics.bookings JOIN olympics.journey ON (journey_id) " +
+                    "WHERE booked_for = '" + memberID + "';")
         // FIXME: DUMMY FUNCTION NEEDS TO BE PROPERLY IMPLEMENTED
         HashMap<String,Object> bookingex1 = new HashMap<String,Object>();
         bookingex1.put("journey_id", Integer.valueOf(17));
