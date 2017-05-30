@@ -63,14 +63,23 @@ public class DatabaseBackend {
         try {
             Connection conn = getConnection();
             stmt = conn.createStatement();
-            ResultSet rset = stmt.executeQuery("SELECT * FROM olympics.member WHERE member_id='"+member+"';");
+            ResultSet rset = stmt.executeQuery("SELECT * FROM olympics.member JOIN olympics.country USING (country_code) JOIN olympics.accommodation ON (accommodation = place_id) JOIN olympics.place USING (place_id) WHERE member_id='"+member+"';");
         	while(rset.next()){
         		boolean valid = (member.equals(rset.getString("member_id")) && new String(password).equals(rset.getString("pass_word")));
         		if (valid) {
-        			System.out.println(rset.getString(2) + "  " + rset.getString(4)+ " " + rset.getString(3));
-        			String title = rset.getString(2);
-        			String first_name = rset.getString(4);
-        			String family_name = rset.getString(3);
+        			
+        			String title = rset.getString("title");
+        			String first_name = rset.getString("given_names");
+        			String family_name = rset.getString("family_name");
+        			String country_name = rset.getString("country_name");
+        			String residence = rset.getString("place_name");
+//        			String member_type =  "";
+        			
+//        			ResultSet aset = stmt.executeQuery("SELECT CASE WHEN olympics.member.member_id = olympics.athlete.member_id THEN 'athlete' WHEN olympics.member.member_id = olympics.staff.member_id THEN 'staff' WHEN olympics.member.member_id = olympics.official.member_id THEN 'offical' END as member_type FROM olympics.member LEFT OUTER JOIN olympics.athlete USING (member_id) LEFT OUTER JOIN olympics.staff USING (member_id) LEFT OUTER JOIN olympics.official USING (member_id) WHERE olympics.member.member_id='"+member+"';");
+//        			while(aset.next()){
+//        				member_type = aset.getString("member_type");
+//        			}
+        			//System.out.println(rset.getString("place_name") + "  " + rset.getString("country_name")+ " " + rset.getString(3));
         			
         			details = new HashMap<String,Object>();
         			// Populate with record data
@@ -78,9 +87,10 @@ public class DatabaseBackend {
         			details.put("title", title);
         			details.put("first_name", first_name);
         			details.put("family_name", family_name);
-        			details.put("country_name", "Australia");
-        			details.put("residence", "SIT");
+        			details.put("country_name", country_name);
+        			details.put("residence", residence );
         			details.put("member_type", "athlete");
+//        			details.put("member_type", member_type);
         		}
         	};
         } catch (Exception e) {
@@ -99,33 +109,61 @@ public class DatabaseBackend {
      * @throws OlympicsDBException
      */
     public HashMap<String, Object> getMemberDetails(String memberID) throws OlympicsDBException {
-        // FIXME: REPLACE FOLLOWING LINES WITH REAL OPERATION
+    	 // FIXME: REPLACE FOLLOWING LINES WITH REAL OPERATION
     	HashMap<String, Object> details = new HashMap<String, Object>();
-    	//details.put(arg0, arg1)= "Hello Mr Joe Bloggs";
-//    	 Statement stmt = null;
-//         
-//         stmt = conn.createStatement();
-//    	
-//    	 ResultSet rset = stmt.executeQuery("SELECT * FROM olympics.member WHERE member_id='"+memberID+"';");
-//    	 rset.next();
+    	Connection conn;
+		
+    	String title = "";
+		String first_name = "";
+		String family_name = "";
+		String country_name = "";
+		String residence = "";
+    	String member_type =  "";
+		String num_booking = "";
     	
     	
-    	details.put("member_id", memberID);
-    	details.put("member_type", "athlete");
-    	details.put("title", "Mr");
-    	details.put("first_name", "Potato");
-    	details.put("family_name", "Head");
-    	details.put("country_name", "Australia");
-    	details.put("residence", "SIT");
-    	details.put("member_type", "athlete");
-    	details.put("num_bookings", Integer.valueOf(20));
-    	
-     	
-    	// Some attributes fetched may depend upon member_type
-    	// This is for an athlete
-    	details.put("num_gold", Integer.valueOf(5));
-    	details.put("num_silver", Integer.valueOf(4));
-    	details.put("num_bronze", Integer.valueOf(1));
+    	try {
+			conn = getConnection();
+			Statement stmt = conn.createStatement();
+			 ResultSet rset = stmt.executeQuery("SELECT * FROM olympics.member JOIN olympics.country USING (country_code) JOIN olympics.accommodation ON (accommodation = place_id) JOIN olympics.place USING (place_id) WHERE member_id='"+memberID+"';");
+			 while(rset.next()){
+				 title = rset.getString("title");
+     			 first_name = rset.getString("given_names");
+     			 family_name = rset.getString("family_name");
+     			 country_name = rset.getString("country_name");
+     			 residence = rset.getString("place_name");
+			 }
+			
+  			ResultSet aset = stmt.executeQuery("SELECT CASE WHEN olympics.member.member_id = olympics.athlete.member_id THEN 'athlete' WHEN olympics.member.member_id = olympics.staff.member_id THEN 'staff' WHEN olympics.member.member_id = olympics.official.member_id THEN 'offical' END as member_type FROM olympics.member LEFT OUTER JOIN olympics.athlete USING (member_id) LEFT OUTER JOIN olympics.staff USING (member_id) LEFT OUTER JOIN olympics.official USING (member_id) WHERE olympics.member.member_id='"+memberID+"';");
+ 			while(aset.next()){
+ 				member_type = aset.getString("member_type");
+ 			}
+ 			
+ 			ResultSet numset = stmt.executeQuery("SELECT COUNT(*) as num_bookings FROM olympics.booking WHERE booked_for LIKE'"+memberID+"';");
+ 			while (numset.next()){
+ 				num_booking = numset.getString("num_bookings");
+ 			}
+ 			
+ 			details.put("member_id", memberID);
+ 	    	details.put("member_type", member_type);
+ 	    	details.put("title", title);
+ 	    	details.put("first_name", first_name);
+ 	    	details.put("family_name", family_name);
+ 	    	details.put("country_name", country_name);
+ 	    	details.put("residence", residence);
+ 	    	details.put("member_type", member_type);
+ 	    	details.put("num_bookings", num_booking);
+ 			
+ 			ResultSet athset = stmt.executeQuery("SELECT COUNT(medal = 'G') as gold, COUNT(medal = 'S') as silver, COUNT(medal = 'B') as bronze FROM olympics.participates WHERE athlete_id ='"+memberID+"';");
+ 	 		while (athset.next()){
+ 	 			details.put("num_gold", athset.getString("gold"));
+ 	 		    details.put("num_silver", athset.getString("silver"));
+ 	 		    details.put("num_bronze", athset.getString("bronze"));	
+ 	 		}	 
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
         
         return details;
     }
