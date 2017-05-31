@@ -15,9 +15,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -63,7 +65,7 @@ public class DatabaseBackend {
         try {
             Connection conn = getConnection();
             stmt = conn.createStatement();
-            ResultSet rset = stmt.executeQuery("SELECT * FROM olympics.member JOIN olympics.country USING (country_code) JOIN olympics.accommodation ON (accommodation = place_id) JOIN olympics.place USING (place_id) WHERE member_id='"+member+"';");
+            ResultSet rset = stmt.executeQuery("SELECT * FROM member JOIN country USING (country_code) JOIN accommodation ON (accommodation = place_id) JOIN place USING (place_id) WHERE member_id='"+member+"';");
         	while(rset.next()){
         		boolean valid = (member.equals(rset.getString("member_id")) && new String(password).equals(rset.getString("pass_word")));
         		if (valid) {
@@ -75,7 +77,7 @@ public class DatabaseBackend {
         			String residence = rset.getString("place_name");
 //        			String member_type =  "";
         			
-//        			ResultSet aset = stmt.executeQuery("SELECT CASE WHEN olympics.member.member_id = olympics.athlete.member_id THEN 'athlete' WHEN olympics.member.member_id = olympics.staff.member_id THEN 'staff' WHEN olympics.member.member_id = olympics.official.member_id THEN 'offical' END as member_type FROM olympics.member LEFT OUTER JOIN olympics.athlete USING (member_id) LEFT OUTER JOIN olympics.staff USING (member_id) LEFT OUTER JOIN olympics.official USING (member_id) WHERE olympics.member.member_id='"+member+"';");
+//        			ResultSet aset = stmt.executeQuery("SELECT CASE WHEN member.member_id = athlete.member_id THEN 'athlete' WHEN member.member_id = staff.member_id THEN 'staff' WHEN member.member_id = official.member_id THEN 'offical' END as member_type FROM member LEFT OUTER JOIN athlete USING (member_id) LEFT OUTER JOIN staff USING (member_id) LEFT OUTER JOIN official USING (member_id) WHERE member.member_id='"+member+"';");
 //        			while(aset.next()){
 //        				member_type = aset.getString("member_type");
 //        			}
@@ -125,7 +127,7 @@ public class DatabaseBackend {
     	try {
 			conn = getConnection();
 			Statement stmt = conn.createStatement();
-			 ResultSet rset = stmt.executeQuery("SELECT * FROM olympics.member JOIN olympics.country USING (country_code) JOIN olympics.accommodation ON (accommodation = place_id) JOIN olympics.place USING (place_id) WHERE member_id='"+memberID+"';");
+			 ResultSet rset = stmt.executeQuery("SELECT * FROM member JOIN country USING (country_code) JOIN accommodation ON (accommodation = place_id) JOIN place USING (place_id) WHERE member_id='"+memberID+"';");
 			 while(rset.next()){
 				 title = rset.getString("title");
      			 first_name = rset.getString("given_names");
@@ -134,12 +136,12 @@ public class DatabaseBackend {
      			 residence = rset.getString("place_name");
 			 }
 			
-  			ResultSet aset = stmt.executeQuery("SELECT CASE WHEN olympics.member.member_id = olympics.athlete.member_id THEN 'athlete' WHEN olympics.member.member_id = olympics.staff.member_id THEN 'staff' WHEN olympics.member.member_id = olympics.official.member_id THEN 'offical' END as member_type FROM olympics.member LEFT OUTER JOIN olympics.athlete USING (member_id) LEFT OUTER JOIN olympics.staff USING (member_id) LEFT OUTER JOIN olympics.official USING (member_id) WHERE olympics.member.member_id='"+memberID+"';");
+  			ResultSet aset = stmt.executeQuery("SELECT CASE WHEN member.member_id = athlete.member_id THEN 'athlete' WHEN member.member_id = staff.member_id THEN 'staff' WHEN member.member_id = official.member_id THEN 'offical' END as member_type FROM member LEFT OUTER JOIN athlete USING (member_id) LEFT OUTER JOIN staff USING (member_id) LEFT OUTER JOIN official USING (member_id) WHERE member.member_id='"+memberID+"';");
  			while(aset.next()){
  				member_type = aset.getString("member_type");
  			}
  			
- 			ResultSet numset = stmt.executeQuery("SELECT COUNT(*) as num_bookings FROM olympics.booking WHERE booked_for LIKE'"+memberID+"';");
+ 			ResultSet numset = stmt.executeQuery("SELECT COUNT(*) as num_bookings FROM booking WHERE booked_for LIKE'"+memberID+"';");
  			while (numset.next()){
  				num_booking = numset.getString("num_bookings");
  			}
@@ -154,7 +156,7 @@ public class DatabaseBackend {
  	    	details.put("member_type", member_type);
  	    	details.put("num_bookings", num_booking);
  			
- 			ResultSet athset = stmt.executeQuery("SELECT COUNT(medal = 'G') as gold, COUNT(medal = 'S') as silver, COUNT(medal = 'B') as bronze FROM olympics.participates WHERE athlete_id ='"+memberID+"';");
+ 			ResultSet athset = stmt.executeQuery("SELECT COUNT(medal = 'G') as gold, COUNT(medal = 'S') as silver, COUNT(medal = 'B') as bronze FROM participates WHERE athlete_id ='"+memberID+"';");
  	 		while (athset.next()){
  	 			details.put("num_gold", athset.getString("gold"));
  	 		    details.put("num_silver", athset.getString("silver"));
@@ -189,7 +191,7 @@ public class DatabaseBackend {
             stmt = conn.createStatement();
             ResultSet rset = stmt.executeQuery(
                     "SELECT * " +
-                    "FROM olympics.event " +
+                    "FROM event " +
                     "WHERE sport_id = '" + sportname + "';"
             );
             while (rset.next()) {
@@ -226,7 +228,7 @@ public class DatabaseBackend {
 
             ResultSet rset = stmt.executeQuery(
                     "SELECT * " +
-                    "FROM olympics.participates JOIN olympics.member WHERE (athlete_id = member_id) " +
+                    "FROM participates JOIN member WHERE (athlete_id = member_id) " +
                     "WHERE event_id = '" + eventId + "';");
             while (rset.next()) {
                 HashMap<String,Object> result = new HashMap<>();
@@ -252,8 +254,68 @@ public class DatabaseBackend {
      * @param toPlace the destination, place to go to.
      * @return a list of all journeys from the origin to destination
      */
-    ArrayList<HashMap<String, Object>> findJourneys(String fromPlace, String toPlace, Date journeyDate) throws OlympicsDBException {
-        // FIXME: Replace the following with REAL OPERATIONS!
+    @SuppressWarnings("deprecation")
+	ArrayList<HashMap<String, Object>> findJourneys(String fromPlace, String toPlace, Date journeyDate) throws OlympicsDBException {
+    	
+    	Connection conn = null;
+    	
+    	try {
+    		
+    		conn = getConnection();
+    		
+    		// 'Newington Sydney 2127 NSW'
+    		// 'Olympic Blvd, Sydney Olympic Park NSW 2127'
+    		// 30
+    		// 5
+    		// 2017
+    		StringBuffer stringBuffer = new StringBuffer();
+    		stringBuffer.append("SELECT journey_id, vehicle_code, F.place_name, T.place_name, depart_time, arrive_time, capacity - nbooked AS available_seats ");
+    		stringBuffer.append("FROM ((Journey NATURAL JOIN Vehicle) JOIN Place F ON (from_place=F.place_id)) JOIN Place T ON (to_place=T.place_id) ");
+    		stringBuffer.append("WHERE F.address = ? AND ");
+    		stringBuffer.append("T.address = ? AND ");
+    		stringBuffer.append("EXTRACT(DAY FROM depart_time) = ? AND ");
+    		stringBuffer.append("EXTRACT(MONTH FROM depart_time) = ? AND ");
+    		stringBuffer.append("EXTRACT(YEAR FROM depart_time) = ? ");
+    		
+    		PreparedStatement stmt = conn.prepareStatement(stringBuffer.toString());
+    		stmt.setString(1, fromPlace);
+    		stmt.setString(2, toPlace);
+    		stmt.setInt(3, journeyDate.getDate());
+    		stmt.setInt(4, journeyDate.getMonth() + 1);
+    		stmt.setInt(5, journeyDate.getYear() + 1900);
+    		ResultSet rs = stmt.executeQuery();
+    		
+    		ArrayList<HashMap<String, Object>> journeys = new ArrayList<>();
+    		
+    		while (rs.next()) {
+    			
+    			HashMap<String, Object> journey = new HashMap<>();
+    			
+    			journey.put("journey_id", Integer.valueOf(rs.getInt(1)));
+    			journey.put("vehicle_code", rs.getString(2));
+    			journey.put("origin_name", rs.getString(3));
+    			journey.put("dest_name", rs.getString(4));
+    			journey.put("when_departs", rs.getTimestamp(5));
+    			journey.put("when_arrives", rs.getTimestamp(6));
+    			journey.put("available_seats", Integer.valueOf(rs.getInt(7)));
+    			
+    			journeys.add(journey);
+    			
+    		}
+    		
+    		rs.close();
+    		reallyClose(conn);
+    		
+    		return journeys;
+    		
+    	} catch (SQLException e) {
+            throw new OlympicsDBException("Error finding journeys", e);
+    	} finally {
+    		reallyClose(conn);
+    	}
+
+    	// FIXME: Replace the following with REAL OPERATIONS!
+    	/*
         ArrayList<HashMap<String, Object>> journeys = new ArrayList<>();
 
         HashMap<String,Object> journey1 = new HashMap<String,Object>();
@@ -267,9 +329,13 @@ public class DatabaseBackend {
         journeys.add(journey1);
         
         return journeys;
+        */
+    	
     }
     
     ArrayList<HashMap<String,Object>> getMemberBookings(String memberID) throws OlympicsDBException {
+
+    	/*
         ArrayList<HashMap<String,Object>> bookings = new ArrayList<HashMap<String,Object>>();
         Statement stmt = null;
         try {
@@ -277,7 +343,7 @@ public class DatabaseBackend {
             stmt = conn.createStatement();
             ResultSet rset = stmt.queryexecute(
                     "SELECT * " +
-                    "FROM olympics.bookings JOIN olympics.journey ON (journey_id) " +
+                    "FROM bookings JOIN journey ON (journey_id) " +
                     "WHERE booked_for = '" + memberID + "';")
         // FIXME: DUMMY FUNCTION NEEDS TO BE PROPERLY IMPLEMENTED
         HashMap<String,Object> bookingex1 = new HashMap<String,Object>();
@@ -299,6 +365,10 @@ public class DatabaseBackend {
         bookings.add(bookingex2);
         
         return bookings;
+        */
+    	
+    	return null;
+        
     }
                 
     /**
@@ -307,9 +377,49 @@ public class DatabaseBackend {
      * @return Various details of journey - see JourneyDetails.java
      * @throws OlympicsDBException
      */
-    public HashMap<String,Object> getJourneyDetails(int bay) throws OlympicsDBException {
+    public HashMap<String,Object> getJourneyDetails(Integer journeyId) throws OlympicsDBException {
+    	
+    	Connection conn = null;
+    	
+    	try {
+    		
+    		conn = getConnection();
+    		
+    		// 129
+    		StringBuffer stringBuffer = new StringBuffer();
+    		stringBuffer.append("SELECT journey_id, vehicle_code, F.place_name, T.place_name, depart_time, arrive_time, capacity, nbooked ");
+    		stringBuffer.append("FROM ((Journey NATURAL JOIN Vehicle) JOIN Place F ON (from_place=F.place_id)) JOIN Place T ON (to_place=T.place_id) ");
+    		stringBuffer.append("WHERE journey_id = ? ");
+    		
+    		PreparedStatement stmt = conn.prepareStatement(stringBuffer.toString());
+    		stmt.setInt(1, journeyId);
+    		ResultSet rs = stmt.executeQuery();
+    		
+    		HashMap<String, Object> journey = new HashMap<>();
+    			
+    		if (rs.next()) {
+	    		journey.put("journey_id", Integer.valueOf(rs.getInt(1)));
+	    		journey.put("vehicle_code", rs.getString(2));
+	    		journey.put("origin_name", rs.getString(3));
+	    		journey.put("dest_name", rs.getString(4));
+	    		journey.put("when_departs", rs.getTimestamp(5));
+	    		journey.put("when_arrives", rs.getTimestamp(6));
+	    		journey.put("capacity", Integer.valueOf(rs.getInt(7)));
+	    		journey.put("nbooked", Integer.valueOf(rs.getInt(8)));
+    		}
+    			
+    		rs.close();
+    		
+    		return journey;
+    		
+    	} catch (Exception e) {
+            throw new OlympicsDBException("Error finding journey", e);
+    	} finally {
+    		reallyClose(conn);
+    	}
+    	
         // FIXME: REPLACE FOLLOWING LINES WITH REAL OPERATION
-        // See the constructor in BayDetails.java
+    	/*
     	HashMap<String,Object> details = new HashMap<String,Object>();
 
     	details.put("journey_id", Integer.valueOf(17));
@@ -322,9 +432,100 @@ public class DatabaseBackend {
         details.put("nbooked", Integer.valueOf(3));
     	
         return details;
+        */
+    	
     }
     
-    public HashMap<String,Object> makeBooking(String byStaff, String forMember, Date departs) throws OlympicsDBException {
+    @SuppressWarnings("deprecation")
+	public HashMap<String,Object> makeBooking(String byStaff, String forMember, String vehicle, Date departs) throws OlympicsDBException {
+    	
+    	Connection conn = null;
+    	
+    	try {
+    		
+			conn = getConnection();
+			
+			conn.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+			conn.setAutoCommit(false);
+			
+			boolean isStaff = isStaff(conn, byStaff);
+			if (!isStaff) {
+				conn.rollback();
+				reallyClose(conn);
+				return null;
+			}
+			
+			int seatsAvailable = seatsAvailable(conn, vehicle, departs);
+			if (seatsAvailable < 1) {
+				conn.rollback();
+				reallyClose(conn);
+				return null;
+			}
+			
+			int journeyId = getJourneyId(conn, vehicle, departs);
+			long whenBooked = System.currentTimeMillis();
+			insertBooking(conn, forMember, byStaff, whenBooked, journeyId);
+			incrementNbooked(conn, journeyId);
+			
+			conn.commit();
+			
+			conn.setAutoCommit(true);
+			
+			/*
+			// A000024883
+			// 3
+			StringBuffer stringBuffer = new StringBuffer();
+			stringBuffer.append("SELECT T.place_name AS to_place_name, F.place_name AS from_place_name, given_names AS booked_by ");
+			stringBuffer.append("FROM (((Booking JOIN Journey USING (journey_id)) ");
+			stringBuffer.append("JOIN Place F ON (from_place = F.place_id)) ");
+			stringBuffer.append("JOIN Place T ON (to_place = T.place_id)) ");
+			stringBuffer.append("JOIN Member M ON (booked_by = member_id) ");
+			stringBuffer.append("WHERE booked_for = ? AND ");
+			stringBuffer.append("journey_id = ? ");
+			
+			PreparedStatement stmt = conn.prepareStatement(stringBuffer.toString());
+			stmt.setString(1, forMember);
+			stmt.setInt(2, journeyId);
+			
+			ResultSet rs = stmt.executeQuery();
+			
+			if (!rs.next()) {
+				return null;
+			}
+			
+			HashMap<String, Object> booking = new HashMap<>();
+			
+			booking.put("vehicle", vehicle);
+		
+			stringBuffer = new StringBuffer();
+			stringBuffer.append(departs.getDay());
+			stringBuffer.append('/');
+			stringBuffer.append(departs.getMonth() + 1);
+			stringBuffer.append('/');
+			stringBuffer.append(departs.getYear() + 1900);
+			booking.put("start_day", stringBuffer.toString());
+			
+			booking.put("start_time", departs);
+			
+			booking.put("to", rs.getString(1));
+			booking.put("from", rs.getString(2));
+			booking.put("booked_by", rs.getString(3));
+			
+			booking.put("when_booked", new Date(whenBooked));
+			
+			return booking;
+			*/
+			
+			return getBookingDetails(forMember, journeyId);
+			
+		} catch (Exception e) {
+			reallyRollback(conn);
+			reallyClose(conn);
+			e.printStackTrace();
+			throw new OlympicsDBException("Error making booking", e);
+		}
+    	
+    	/*
     	HashMap<String,Object> booking = null;
     	
         // FIXME: DUMMY FUNCTION NEEDS TO BE PROPERLY IMPLEMENTED
@@ -337,11 +538,168 @@ public class DatabaseBackend {
     	booking.put("booked_by", "Mike");
     	booking.put("whenbooked", new Date());
     	return booking;
+    	*/
+    	
     }
     
-    public HashMap<String,Object> getBookingDetails(String memberID, Integer journeyId) throws OlympicsDBException {
-    	HashMap<String,Object> booking = null;
-
+    private boolean isStaff(Connection conn, String memberId) throws SQLException {
+    	
+		// A000022173
+		StringBuffer stringBuffer = new StringBuffer();
+		stringBuffer.append("SELECT EXISTS ( ");
+		stringBuffer.append("SELECT member_id ");
+		stringBuffer.append("FROM Staff ");
+		stringBuffer.append("WHERE member_id = ? ");
+		stringBuffer.append(") ");
+		
+		PreparedStatement stmt = conn.prepareStatement(stringBuffer.toString());
+		stmt.setString(1, memberId);
+		
+		ResultSet rs = stmt.executeQuery();
+		rs.next();
+		boolean isStaff = rs.getBoolean(1);
+		
+		rs.close();
+		return isStaff;
+    	
+    }
+    
+    private int seatsAvailable(Connection conn, String vehicleCode, Date departTime) throws SQLException {
+    	
+		// AY91AN39
+		// 2017-05-30 13:30:00
+		StringBuffer stringBuffer = new StringBuffer();
+		stringBuffer.append("SELECT capacity - nbooked AS seats_avail ");
+		stringBuffer.append("FROM Journey JOIN Vehicle USING (vehicle_code) ");
+		stringBuffer.append("WHERE vehicle_code = ? AND ");
+		stringBuffer.append("depart_time = ? ");
+		
+		PreparedStatement stmt = conn.prepareStatement(stringBuffer.toString());
+		stmt.setString(1, vehicleCode);
+		stmt.setTimestamp(2, new Timestamp(departTime.getTime()));
+		
+		ResultSet rs = stmt.executeQuery();
+		rs.next();
+		int seatsAvailable = rs.getInt(1);
+		
+		rs.close();
+		return seatsAvailable;
+    	
+    }
+    
+    private int getJourneyId(Connection conn, String vehicleCode, Date departTime) throws SQLException {
+    	
+		// AY91AN39
+		// 2017-05-30 13:30:00
+		StringBuffer stringBuffer = new StringBuffer();
+		stringBuffer.append("SELECT journey_id ");
+		stringBuffer.append("FROM Journey ");
+		stringBuffer.append("WHERE vehicle_code = ? AND ");
+		stringBuffer.append("depart_time = ? ");
+		
+		PreparedStatement stmt = conn.prepareStatement(stringBuffer.toString());
+		stmt.setString(1, vehicleCode);
+		stmt.setTimestamp(2, new Timestamp(departTime.getTime()));
+		
+		ResultSet rs = stmt.executeQuery();
+		rs.next();
+		int journeyId = rs.getInt(1);
+		
+		rs.close();
+		return journeyId;
+    	
+    }
+    
+    private void reallyRollback(Connection conn) {
+    	if (conn != null) {
+    		try {
+				conn.rollback();
+			} catch (SQLException ignore) {}
+    	}
+    }
+    
+    private void insertBooking(Connection conn, String memberId, String staffId, long whenBooked, int journeyId) throws SQLException {
+    	
+		// A000022173
+		// A000022173
+    	// 129
+		StringBuffer stringBuffer = new StringBuffer();
+		stringBuffer.append("INSERT INTO Booking ");
+		stringBuffer.append("VALUES (?, ?, ?, ?) ");
+		
+		PreparedStatement stmt = conn.prepareStatement(stringBuffer.toString());
+		stmt.setString(1, memberId);
+		stmt.setString(2, staffId);
+		stmt.setTimestamp(3, new Timestamp(whenBooked));
+		stmt.setInt(4, journeyId);
+		
+		stmt.executeUpdate();
+		
+    }
+    
+    private void incrementNbooked(Connection conn, int journeyId) throws SQLException {
+    	
+    	StringBuffer stringBuffer = new StringBuffer();
+    	stringBuffer.append("UPDATE Journey ");
+    	stringBuffer.append("SET nbooked = nbooked + 1 ");
+    	stringBuffer.append("WHERE journey_id = ? ");
+    	
+    	PreparedStatement stmt = conn.prepareStatement(stringBuffer.toString());
+    	stmt.setInt(1, journeyId);
+    	
+    	stmt.executeUpdate();
+    	
+    }
+    
+    public HashMap<String,Object> getBookingDetails(String memberId, Integer journeyId) throws OlympicsDBException {
+    	
+    	Connection conn = null;
+    	
+    	try {
+	    	conn = getConnection();
+	    	
+			// A000022173
+	    	// 129
+			StringBuffer stringBuffer = new StringBuffer();
+			stringBuffer.append("SELECT vehicle_code, depart_time, T.place_name, F.place_name, BB.given_names, BF.given_names, when_booked, arrive_time ");
+			stringBuffer.append("FROM ((((Booking JOIN Journey USING (journey_id)) ");
+			stringBuffer.append("JOIN Place T ON (to_place = T.place_id)) ");
+			stringBuffer.append("JOIN Place F ON (from_place = F.place_id)) ");
+			stringBuffer.append("JOIN Member BB ON (booked_by = BB.member_id)) ");
+			stringBuffer.append("JOIN Member BF ON (booked_for = BF.member_id) ");
+			stringBuffer.append("WHERE booked_for = ? AND ");
+			stringBuffer.append("journey_id = ? ");
+			
+			PreparedStatement stmt = conn.prepareStatement(stringBuffer.toString());
+			stmt.setString(1, memberId);
+			stmt.setInt(2, journeyId);
+			
+			ResultSet rs = stmt.executeQuery();
+			rs.next();
+			
+			HashMap<String, Object> bookingDetails = new HashMap<>();
+			
+			bookingDetails.put("journey_id", journeyId);
+			bookingDetails.put("vehicle_code", rs.getString(1));
+			bookingDetails.put("when_departs", new Date(rs.getTimestamp(2).getTime()));
+			bookingDetails.put("dest_name", rs.getString(3));
+			bookingDetails.put("origin_name", rs.getString(4));
+			bookingDetails.put("bookedby_name", rs.getString(5));
+			bookingDetails.put("bookedfor_name", rs.getString(6));
+			bookingDetails.put("when_booked", new Date(rs.getTimestamp(7).getTime()));
+			bookingDetails.put("when_arrives", new Date(rs.getTimestamp(8).getTime()));
+			
+			rs.close();
+			reallyClose(conn);
+			return bookingDetails;
+			
+    	} catch (SQLException e) {
+    		reallyClose(conn);
+    		e.printStackTrace();
+    		throw new OlympicsDBException("Error getting booking details", e);
+    	}
+    	
+    	/*
         // FIXME: DUMMY FUNCTION NEEDS TO BE PROPERLY IMPLEMENTED
     	booking = new HashMap<String,Object>();
 
@@ -357,6 +715,8 @@ public class DatabaseBackend {
     	
 
         return booking;
+        */
+    	
     }
     
 	public ArrayList<HashMap<String, Object>> getSports() throws OlympicsDBException {
