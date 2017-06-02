@@ -124,19 +124,44 @@ public class DatabaseBackend {
     	String member_type =  "";
 		String num_booking = "";
 		
+		// TODO --> Turn into one query that checks all of them out
+		
 		String memberDetails = "SELECT * " +
 								"FROM member " +
-													"JOIN country USING (country_code) "+
-													"JOIN accommodation ON (accommodation = place_id) " + 
-													"JOIN place USING (place_id) " + 
+											"JOIN country USING (country_code) "+
+											"JOIN accommodation ON (accommodation = place_id) " + 
+											"JOIN place USING (place_id) " + 
 							    "WHERE member_id = ? ;";
-    	
+
+		String memberType = "SELECT " +
+									"CASE WHEN member.member_id = athlete.member_id THEN 'athlete' " +
+									 "WHEN member.member_id = staff.member_id THEN 'staff' " +
+									 "WHEN member.member_id = official.member_id THEN 'offical' " +
+									 "END as member_type " +
+						     "FROM member " +
+						     				"LEFT OUTER JOIN olympics.athlete USING (member_id) "
+						     				+ "LEFT OUTER JOIN olympics.staff USING (member_id) "
+						     				+ "LEFT OUTER JOIN olympics.official USING (member_id) "
+						     + "WHERE member.member_id = ? ;";
+		
+		String Bookings = "SELECT COUNT(*) as num_bookings "
+						+ "FROM booking WHERE booked_for = ? ;";
+		
+		String medals = "SELECT COUNT(medal = 'G') as gold, "
+				             + "COUNT(medal = 'S') as silver, "
+				             + "COUNT(medal = 'B') as bronze "
+				      + "FROM participates WHERE athlete_id = ? ;";
+		
 		 Connection conn = null;
 	     PreparedStatement stmt = null;
+	     PreparedStatement aset = null;
+	     PreparedStatement numset = null;
     	
     	try {
     		 conn = getConnection();
              stmt = conn.prepareStatement(memberDetails.toString());
+             aset = conn.prepareStatement(memberType.toString());
+             numset = conn.prepareStatement(Bookings.toString());
              stmt.setString(1, memberID);
              ResultSet rset = stmt.executeQuery();
              
@@ -157,12 +182,12 @@ public class DatabaseBackend {
      			 residence = rset.getString("place_name");
 			 }
 			
-  			ResultSet aset = stmt.executeQuery("SELECT CASE WHEN member.member_id = athlete.member_id THEN 'athlete' WHEN member.member_id = staff.member_id THEN 'staff' WHEN member.member_id = official.member_id THEN 'offical' END as member_type FROM member LEFT OUTER JOIN olympics.athlete USING (member_id) LEFT OUTER JOIN olympics.staff USING (member_id) LEFT OUTER JOIN olympics.official USING (member_id) WHERE member.member_id='"+memberID+"';");
+//  			ResultSet aset = stmt.executeQuery("SELECT CASE WHEN member.member_id = athlete.member_id THEN 'athlete' WHEN member.member_id = staff.member_id THEN 'staff' WHEN member.member_id = official.member_id THEN 'offical' END as member_type FROM member LEFT OUTER JOIN olympics.athlete USING (member_id) LEFT OUTER JOIN olympics.staff USING (member_id) LEFT OUTER JOIN olympics.official USING (member_id) WHERE member.member_id='"+memberID+"';");
  			while(aset.next()){
  				member_type = aset.getString("member_type");
  			}
  			
- 			ResultSet numset = stmt.executeQuery("SELECT COUNT(*) as num_bookings FROM booking WHERE booked_for LIKE'"+memberID+"';");
+// 			ResultSet numset = stmt.executeQuery("SELECT COUNT(*) as num_bookings FROM booking WHERE booked_for LIKE'"+memberID+"';");
  			while (numset.next()){
  				num_booking = numset.getString("num_bookings");
  			}
