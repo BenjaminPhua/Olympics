@@ -61,17 +61,44 @@ public class DatabaseBackend {
      */
     public HashMap<String,Object> checkLogin(String member, char[] password) throws OlympicsDBException  {
         HashMap<String,Object> details = null;
-        Statement stmt = null;
+        
+//        String stringBuffer = "SELECT * " +
+//    	                     "FROM olympics.member JOIN olympics.country USING (country_code)"
+//    	                     + " JOIN olympics.accommodation ON (accommodation = place_id)"
+//    	                     + " JOIN olympics.place USING (place_id) " +
+//    	                     "WHERE member_id = ?";
+        
+        String stringBuffer = "SELECT *, CASE WHEN member.member_id = athlete.member_id THEN 'athlete' " +
+        									"WHEN member.member_id = staff.member_id THEN 'staff' " +
+        									"WHEN member.member_id = official.member_id THEN 'offical' "+
+        									"END as member_type " +
+        					"FROM olympics.member JOIN olympics.country USING (country_code) " +
+        										"JOIN olympics.accommodation ON (accommodation = place_id) " +
+        										"JOIN olympics.place USING (place_id) " +
+        										"LEFT OUTER JOIN olympics.athlete USING (member_id) " +
+        										"LEFT OUTER JOIN olympics.staff USING (member_id) " +
+        										"LEFT OUTER JOIN olympics.official USING (member_id) " + 
+        										"WHERE member_id = ?";
+    	
+        
+//        Statement stmt = null;
+        Connection conn = null;
+        PreparedStatement stmt = null;
         try {
-            Connection conn = getConnection();
-            stmt = conn.createStatement();
-            //ResultSet rset = stmt.executeQuery("SELECT * FROM member JOIN country USING (country_code) JOIN accommodation ON (accommodation = place_id) JOIN place USING (place_id) WHERE member_id='"+member+"';");
-            ResultSet rset = stmt.executeQuery("SELECT * " +
-					"FROM olympics.member " +
-						"JOIN olympics.country USING (country_code) " +
-						"JOIN olympics.accommodation ON (accommodation = place_id) " + 
-						"JOIN olympics.place USING (place_id) " + 
-					"WHERE member_id='"+member+"';");
+            conn = getConnection();
+            stmt = conn.prepareStatement(stringBuffer.toString());
+            stmt.setString(1, member);
+            
+            ResultSet rset = stmt.executeQuery();
+//            stmt = conn.createStatement();
+//            ResultSet rset = stmt.executeQuery("SELECT * " +
+//					"FROM olympics.member " +
+//						"JOIN olympics.country USING (country_code) " +
+//						"JOIN olympics.accommodation ON (accommodation = place_id) " + 
+//						"JOIN olympics.place USING (place_id) " + 
+//					"WHERE member_id='"+member+"';");
+            
+            
             while(rset.next()){
         		boolean valid = (member.equals(rset.getString("member_id")) && new String(password).equals(rset.getString("pass_word")));
         		if (valid) {
@@ -133,13 +160,13 @@ public class DatabaseBackend {
     	try {
 			conn = getConnection();
 			Statement stmt = conn.createStatement();
-			 //ResultSet rset = stmt.executeQuery("SELECT * FROM member JOIN country USING (country_code) JOIN accommodation ON (accommodation = place_id) JOIN place USING (place_id) WHERE member_id='"+memberID+"';");
+//			 ResultSet rset = stmt.executeQuery("SELECT * FROM member JOIN country USING (country_code) JOIN accommodation ON (accommodation = place_id) JOIN place USING (place_id) WHERE member_id='"+memberID+"';");
 			 ResultSet rset = stmt.executeQuery("SELECT * " +
-						"FROM olympics.member " +
-							"JOIN olympics.country USING (country_code) "+
-							"JOIN olympics.accommodation ON (accommodation = place_id) " + 
-							"JOIN olympics.place USING (place_id) " + 
-						"WHERE member_id='"+memberID+"';");
+												"FROM olympics.member " +
+													"JOIN olympics.country USING (country_code) "+
+													"JOIN olympics.accommodation ON (accommodation = place_id) " + 
+													"JOIN olympics.place USING (place_id) " + 
+													"WHERE member_id='"+memberID+"';");
 			
 			while(rset.next()){
 				 title = rset.getString("title");
@@ -149,12 +176,12 @@ public class DatabaseBackend {
      			 residence = rset.getString("place_name");
 			 }
 			
-  			ResultSet aset = stmt.executeQuery("SELECT CASE WHEN member.member_id = athlete.member_id THEN 'athlete' WHEN member.member_id = staff.member_id THEN 'staff' WHEN member.member_id = official.member_id THEN 'offical' END as member_type FROM member LEFT OUTER JOIN athlete USING (member_id) LEFT OUTER JOIN staff USING (member_id) LEFT OUTER JOIN official USING (member_id) WHERE member.member_id='"+memberID+"';");
+  			ResultSet aset = stmt.executeQuery("SELECT CASE WHEN member.member_id = athlete.member_id THEN 'athlete' WHEN member.member_id = staff.member_id THEN 'staff' WHEN member.member_id = official.member_id THEN 'offical' END as member_type FROM olympics.member LEFT OUTER JOIN olympics.athlete USING (member_id) LEFT OUTER JOIN olympics.staff USING (member_id) LEFT OUTER JOIN olympics.official USING (member_id) WHERE member.member_id='"+memberID+"';");
  			while(aset.next()){
  				member_type = aset.getString("member_type");
  			}
  			
- 			ResultSet numset = stmt.executeQuery("SELECT COUNT(*) as num_bookings FROM booking WHERE booked_for LIKE'"+memberID+"';");
+ 			ResultSet numset = stmt.executeQuery("SELECT COUNT(*) as num_bookings FROM olympics.booking WHERE booked_for LIKE'"+memberID+"';");
  			while (numset.next()){
  				num_booking = numset.getString("num_bookings");
  			}
@@ -169,7 +196,7 @@ public class DatabaseBackend {
  	    	details.put("member_type", member_type);
  	    	details.put("num_bookings", num_booking);
  			
- 			ResultSet athset = stmt.executeQuery("SELECT COUNT(medal = 'G') as gold, COUNT(medal = 'S') as silver, COUNT(medal = 'B') as bronze FROM participates WHERE athlete_id ='"+memberID+"';");
+ 			ResultSet athset = stmt.executeQuery("SELECT COUNT(medal = 'G') as gold, COUNT(medal = 'S') as silver, COUNT(medal = 'B') as bronze FROM olympics.participates WHERE athlete_id ='"+memberID+"';");
  	 		while (athset.next()){
  	 			details.put("num_gold", athset.getString("gold"));
  	 		    details.put("num_silver", athset.getString("silver"));
