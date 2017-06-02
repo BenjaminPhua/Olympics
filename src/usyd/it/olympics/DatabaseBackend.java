@@ -62,26 +62,30 @@ public class DatabaseBackend {
     public HashMap<String,Object> checkLogin(String member, char[] password) throws OlympicsDBException  {
         HashMap<String,Object> details = null;
         
-//        String stringBuffer = "SELECT * " +
-//    	                     "FROM olympics.member JOIN olympics.country USING (country_code)"
-//    	                     + " JOIN olympics.accommodation ON (accommodation = place_id)"
-//    	                     + " JOIN olympics.place USING (place_id) " +
-//    	                     "WHERE member_id = ?";
+//        String stringBuffer = "SELECT *, CASE WHEN member.member_id = athlete.member_id THEN 'athlete' " +
+//        									"WHEN member.member_id = staff.member_id THEN 'staff' " +
+//        									"WHEN member.member_id = official.member_id THEN 'offical' "+
+//        									"END as member_type " +
+//        					"FROM olympics.member JOIN olympics.country USING (country_code) " +
+//        										"JOIN olympics.accommodation ON (accommodation = place_id) " +
+//        										"JOIN olympics.place USING (place_id) " +
+//        										"LEFT OUTER JOIN olympics.athlete USING (member_id) " +
+//        										"LEFT OUTER JOIN olympics.staff USING (member_id) " +
+//        										"LEFT OUTER JOIN olympics.official USING (member_id) " + 
+//        										"WHERE member_id = ?";
         
         String stringBuffer = "SELECT *, CASE WHEN member.member_id = athlete.member_id THEN 'athlete' " +
-        									"WHEN member.member_id = staff.member_id THEN 'staff' " +
-        									"WHEN member.member_id = official.member_id THEN 'offical' "+
-        									"END as member_type " +
-        					"FROM olympics.member JOIN olympics.country USING (country_code) " +
-        										"JOIN olympics.accommodation ON (accommodation = place_id) " +
-        										"JOIN olympics.place USING (place_id) " +
-        										"LEFT OUTER JOIN olympics.athlete USING (member_id) " +
-        										"LEFT OUTER JOIN olympics.staff USING (member_id) " +
-        										"LEFT OUTER JOIN olympics.official USING (member_id) " + 
-        										"WHERE member_id = ?";
+											"WHEN member.member_id = staff.member_id THEN 'staff' " +
+											"WHEN member.member_id = official.member_id THEN 'official' "+
+											"END as member_type " +
+							"FROM member JOIN country USING (country_code) " +
+												 "JOIN accommodation ON (accommodation = place_id) " +
+												 "JOIN place USING (place_id) " +
+												 "LEFT OUTER JOIN athlete USING (member_id) " +
+												 "LEFT OUTER JOIN staff USING (member_id) " +
+												 "LEFT OUTER JOIN official USING (member_id) " + 
+							"WHERE member_id = ?";
     	
-        
-//        Statement stmt = null;
         Connection conn = null;
         PreparedStatement stmt = null;
         try {
@@ -90,14 +94,6 @@ public class DatabaseBackend {
             stmt.setString(1, member);
             
             ResultSet rset = stmt.executeQuery();
-//            stmt = conn.createStatement();
-//            ResultSet rset = stmt.executeQuery("SELECT * " +
-//					"FROM olympics.member " +
-//						"JOIN olympics.country USING (country_code) " +
-//						"JOIN olympics.accommodation ON (accommodation = place_id) " + 
-//						"JOIN olympics.place USING (place_id) " + 
-//					"WHERE member_id='"+member+"';");
-            
             
             while(rset.next()){
         		boolean valid = (member.equals(rset.getString("member_id")) && new String(password).equals(rset.getString("pass_word")));
@@ -108,7 +104,7 @@ public class DatabaseBackend {
         			String family_name = rset.getString("family_name");
         			String country_name = rset.getString("country_name");
         			String residence = rset.getString("place_name");
-//        			String member_type =  "";
+        			String member_type = rset.getString("member_type");
         			
 //        			ResultSet aset = stmt.executeQuery("SELECT CASE WHEN member.member_id = athlete.member_id THEN 'athlete' WHEN member.member_id = staff.member_id THEN 'staff' WHEN member.member_id = official.member_id THEN 'offical' END as member_type FROM member LEFT OUTER JOIN athlete USING (member_id) LEFT OUTER JOIN staff USING (member_id) LEFT OUTER JOIN official USING (member_id) WHERE member.member_id='"+member+"';");
 //        			while(aset.next()){
@@ -124,8 +120,8 @@ public class DatabaseBackend {
         			details.put("family_name", family_name);
         			details.put("country_name", country_name);
         			details.put("residence", residence );
-        			details.put("member_type", "athlete");
-//        			details.put("member_type", member_type);
+//        			details.put("member_type", "athlete");
+        			details.put("member_type", member_type);
         		}
         	} reallyClose(conn);
         } catch (Exception e) {
