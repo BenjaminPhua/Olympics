@@ -65,8 +65,14 @@ public class DatabaseBackend {
         try {
             Connection conn = getConnection();
             stmt = conn.createStatement();
-            ResultSet rset = stmt.executeQuery("SELECT * FROM member JOIN country USING (country_code) JOIN accommodation ON (accommodation = place_id) JOIN place USING (place_id) WHERE member_id='"+member+"';");
-        	while(rset.next()){
+            //ResultSet rset = stmt.executeQuery("SELECT * FROM member JOIN country USING (country_code) JOIN accommodation ON (accommodation = place_id) JOIN place USING (place_id) WHERE member_id='"+member+"';");
+            ResultSet rset = stmt.executeQuery("SELECT * " +
+					"FROM olympics.member " +
+						"JOIN olympics.country USING (country_code) " +
+						"JOIN olympics.accommodation ON (accommodation = place_id) " + 
+						"JOIN olympics.place USING (place_id) " + 
+					"WHERE member_id='"+member+"';");
+            while(rset.next()){
         		boolean valid = (member.equals(rset.getString("member_id")) && new String(password).equals(rset.getString("pass_word")));
         		if (valid) {
         			
@@ -127,8 +133,15 @@ public class DatabaseBackend {
     	try {
 			conn = getConnection();
 			Statement stmt = conn.createStatement();
-			 ResultSet rset = stmt.executeQuery("SELECT * FROM member JOIN country USING (country_code) JOIN accommodation ON (accommodation = place_id) JOIN place USING (place_id) WHERE member_id='"+memberID+"';");
-			 while(rset.next()){
+			 //ResultSet rset = stmt.executeQuery("SELECT * FROM member JOIN country USING (country_code) JOIN accommodation ON (accommodation = place_id) JOIN place USING (place_id) WHERE member_id='"+memberID+"';");
+			 ResultSet rset = stmt.executeQuery("SELECT * " +
+						"FROM olympics.member " +
+							"JOIN olympics.country USING (country_code) "+
+							"JOIN olympics.accommodation ON (accommodation = place_id) " + 
+							"JOIN olympics.place USING (place_id) " + 
+						"WHERE member_id='"+memberID+"';");
+			
+			while(rset.next()){
 				 title = rset.getString("title");
      			 first_name = rset.getString("given_names");
      			 family_name = rset.getString("family_name");
