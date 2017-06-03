@@ -114,6 +114,7 @@ public class DatabaseBackend {
      */
     public HashMap<String, Object> getMemberDetails(String memberID) throws OlympicsDBException {
     	 // FIXME: REPLACE FOLLOWING LINES WITH REAL OPERATION
+    	/*
     	HashMap<String, Object> details = new HashMap<String, Object>();
 		
     	String title = "";
@@ -214,6 +215,8 @@ public class DatabaseBackend {
 		}
         
         return details;
+        */
+    	return new HashMap<String, Object>();
     }
 
 
@@ -578,11 +581,16 @@ public class DatabaseBackend {
 			
 			return getBookingDetails(forMember, journeyId);
 			
-		} catch (Exception e) {
+		} catch (SQLException e) {
 			reallyRollback(conn);
 			reallyClose(conn);
 			e.printStackTrace();
 			throw new OlympicsDBException("Error making booking", e);
+		} catch (OlympicsDBException e) {
+			reallyRollback(conn);
+			reallyClose(conn);
+			e.printStackTrace();
+			throw e;
 		}
     	
     	/*
@@ -711,23 +719,26 @@ public class DatabaseBackend {
     	
     }
 
-	public HashMap<String,Object> getBookingDetails(String memberID, Integer journeyId) throws OlympicsDBException {
+	public HashMap<String,Object> getBookingDetails(String memberId, Integer journeyId) throws OlympicsDBException {
 
     	/*
     	* Users can browse a specific journey, including details for when the booking was
     	* made and by whom
     	* */
 
+		/*
 		HashMap<String,Object> booking = null;
+		Connection conn = null;
 		Statement stmt = null;
 		try {
-			Connection conn = getConnection();
+			conn = getConnection();
 			stmt = conn.createStatement();
 			ResultSet rset = stmt.executeQuery(
 					"SELECT * " +
-							"FROM olympics.bookings JOIN olympics.journey ON (journey_id) JOIN olympics.member WHERE (athlete_id = member_id)" +
+							"FROM bookings JOIN journey ON (journey_id) JOIN member WHERE (athlete_id = member_id) " +
 							"WHERE booked_for = '" + memberID + "' AND journey_id = '" + journeyId + "' " +
 							"ORDER BY depart_time;");
+			rset.next();
 			booking = new HashMap<String,Object>();
 			booking.put("journey_id", rset.getInt("journey_id")); //convert to Object???
 			booking.put("vehicle_code", rset.getString(("vehicle_code"))); //char(8()
@@ -740,8 +751,57 @@ public class DatabaseBackend {
 			booking.put("when_arrives", new Date());
 
 		} catch (Exception e) {
+			reallyClose(conn);
+			e.printStackTrace();
 			throw new OlympicsDBException("Error getting member bookings", e);
 		} return booking;
+		*/
+		
+    	Connection conn = null;
+    	
+    	try {
+    		
+    		conn = getConnection();
+    		
+    		// A000024883
+    		// 3
+    		StringBuffer stringBuffer = new StringBuffer();
+    		stringBuffer.append("SELECT journey_id, vehicle_code, depart_time, T.place_name AS to_place_name, F.place_name AS from_place_name, BB.title AS booked_by_title, BB.family_name AS booked_by_family_name, BF.family_name AS booked_for_family_name, BF.given_names AS booked_for_given_names, when_booked, arrive_time ");
+    		stringBuffer.append("FROM (((((Booking JOIN Journey USING (journey_id))) ");
+    		stringBuffer.append("JOIN Place F ON (from_place = F.place_id)) ");
+    		stringBuffer.append("JOIN Place T ON (to_place = T.place_id)) ");
+    		stringBuffer.append("JOIN Member BB ON (booked_by = BB.member_id)) ");
+    		stringBuffer.append("JOIN Member BF ON (booked_for = BF.member_id) ");
+    		stringBuffer.append("WHERE booked_for = ? AND journey_id = ? ");
+    		
+    		PreparedStatement stmt = conn.prepareStatement(stringBuffer.toString());
+    		stmt.setString(1, memberId);
+    		stmt.setInt(2, journeyId);
+    		ResultSet rs = stmt.executeQuery();
+    		
+    		HashMap<String, Object> booking = new HashMap<>();
+    			
+    		if (rs.next()) {
+	    		booking.put("journey_id", Integer.valueOf(rs.getInt("journey_id")));
+	    		booking.put("vehicle_code", rs.getString("vehicle_code"));
+	    		booking.put("when_departs", new Date(rs.getTimestamp("depart_time").getTime()));
+	    		booking.put("dest_name", rs.getString("to_place_name"));
+	    		booking.put("origin_name", rs.getString("from_place_name"));
+	    		booking.put("bookedby_name", rs.getString("booked_by_title") + " " + rs.getString("booked_by_family_name"));
+	    		booking.put("bookedfor_name", rs.getString("booked_for_family_name") + ", " + rs.getString("booked_for_given_names"));
+	    		booking.put("when_booked", new Date(rs.getTimestamp("when_booked").getTime()));
+	    		booking.put("when_arrives", new Date(rs.getTimestamp("arrive_time").getTime()));
+    		}
+    			
+    		rs.close();
+    		
+    		return booking;
+    		
+    	} catch (Exception e) {
+            throw new OlympicsDBException("Error getting booking details", e);
+    	} finally {
+    		reallyClose(conn);
+    	}
 
 //
 //        // FIXME: DUMMY FUNCTION NEEDS TO BE PROPERLY IMPLEMENTED
