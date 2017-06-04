@@ -229,35 +229,50 @@ public class DatabaseBackend {
      * @return List of the events for that sport
      * @throws OlympicsDBException
      */
-    ArrayList<HashMap<String, Object>> getEventsOfSport(Integer sportname) throws OlympicsDBException {
-        // FIXME: Replace the following with REAL OPERATIONS!
+    public ArrayList<HashMap<String, Object>> getEventsOfSport(Integer sportname) throws OlympicsDBException {
 
-        ArrayList<HashMap<String, Object>> events = new ArrayList<>();
+    	/*
+		  Gets all the events for a sport
+		  Eg Basketball - Men's Basketball, Women's Basketball, Men's 1v1
+		 */
 
-        Statement stmt = null;
+
+		Connection conn = null;
         try {
-            Connection conn = getConnection();
-            stmt = conn.createStatement();
-            ResultSet rset = stmt.executeQuery(
-                    "SELECT * " +
-                    "FROM event " +
-                    "WHERE sport_id = '" + sportname + "';"
-            );
+            conn = getConnection();
+
+			ArrayList<HashMap<String, Object>> events = new ArrayList<>();
+			StringBuffer stringBuffer = new StringBuffer();
+			stringBuffer.append("SELECT event_id, sport_id, event_name, event_gender, place_name, event_start ");
+			stringBuffer.append("FROM event JOIN place ON (event.sport_venue = place.place_id) ");
+			stringBuffer.append("WHERE sport_id = ? ");
+
+			PreparedStatement stmt = conn.prepareStatement(stringBuffer.toString());
+            stmt.setInt(1, sportname);
+            ResultSet rset = stmt.executeQuery();
+//            ResultSet rset = stmt.executeQuery(
+//                    "SELECT * " +
+//                    "FROM event " +
+//                    "WHERE sport_id = '" + sportname + "';"
+//            );
             while (rset.next()) {
                 HashMap<String,Object> event = new HashMap<>();
-                event.put("event_id", rset.getInt("event_id"));
-                event.put("sport_id", rset.getInt("sport_id"));
-                event.put("event_name", rset.getString("event_name"));
-                event.put("event_gender", rset.getString("event_gender"));
-                event.put("sport_venue", rset.getInt("sport_venue"));
-                event.put("event_start", rset.getTimestamp("event_start"));
+
+                event.put("event_id", rset.getInt(1));
+				event.put("sport_id", rset.getInt(2));
+                event.put("event_name", rset.getString(3));
+                event.put("event_gender", rset.getString(4));
+                event.put("sport_venue", rset.getString(5));
+                event.put("event_start", rset.getTimestamp(6));
                 events.add(event);
             }
+            rset.close();
+			return events;
         } catch (Exception e) {
             throw new OlympicsDBException("Error getting events of this sport", e);
         }
 
-        return events;
+
     }
 
     /**
@@ -266,7 +281,7 @@ public class DatabaseBackend {
      * @return a hashmap for each result in the event.
      * @throws OlympicsDBException
      */
-    ArrayList<HashMap<String, Object>> getResultsOfEvent(Integer eventId) throws OlympicsDBException {
+    public ArrayList<HashMap<String, Object>> getResultsOfEvent(Integer eventId) throws OlympicsDBException {
         // FIXME: Replace the following with REAL OPERATIONS!
 
     	ArrayList<HashMap<String, Object>> results = new ArrayList<>();
