@@ -195,14 +195,15 @@ public class DatabaseBackend {
  		 	 	}
  			}
 
+			conn.close();
 
-    } catch (SQLException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-        
-        return details; 
-    	//return new HashMap<String, Object>();
+		} catch (SQLException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
+			return details;
+			//return new HashMap<String, Object>();
     }
 
 
@@ -253,6 +254,7 @@ public class DatabaseBackend {
                 events.add(event);
             }
             rset.close();
+            conn.close();
 			return events;
         } catch (Exception e) {
             throw new OlympicsDBException("Error getting events of this sport", e);
@@ -268,30 +270,50 @@ public class DatabaseBackend {
      * @throws OlympicsDBException
      */
     public ArrayList<HashMap<String, Object>> getResultsOfEvent(Integer eventId) throws OlympicsDBException {
-        // FIXME: Replace the following with REAL OPERATIONS!
 
-    	ArrayList<HashMap<String, Object>> results = new ArrayList<>();
-        Statement stmt = null;
+		Connection conn = null;
+
         try {
-            Connection conn = getConnection();
-            stmt = conn.createStatement();
+            conn = getConnection();
 
-            ResultSet rset = stmt.executeQuery(
-                    "SELECT * " +
-                    "FROM participates JOIN member WHERE (athlete_id = member_id) " +
-                    "WHERE event_id = '" + eventId + "';");
+			ArrayList<HashMap<String, Object>> results = new ArrayList<>();
+
+
+            StringBuffer stringBuffer = new StringBuffer();
+            stringBuffer.append("SELECT given_names, family_name, country_name, medal ");
+			stringBuffer.append("FROM participates JOIN member ON (athlete_id = member_id) JOIN country WHERE (country_code) ");
+			stringBuffer.append("WHERE event_id = ? ");
+
+			PreparedStatement stmt = conn.prepareStatement(stringBuffer.toString());
+			stmt.setInt(1, eventId);
+			ResultSet rset = stmt.executeQuery();
+
             while (rset.next()) {
                 HashMap<String,Object> result = new HashMap<>();
-                result.put("participant", rset.getString("family_name") + " " + rset.getString("given_names"));
-                result.put("country_name", rset.getString("country_code"));
-                result.put("medal", rset.getString("medal_character"));
+                result.put("participant", rset.getString(1) + ", " + rset.getString(2));
+                result.put("country_name", rset.getString(3));
+                String medal = null;
+                /*if (rset.getString(4) != null) {
+					if (rset.getString(4).equals("G")) {
+						medal = "Gold";
+					} else if (rset.getString(4).equals("S")) {
+						medal = "Silver";
+					} else if (rset.getString(4).equals("B")) {
+						medal = "Bronze";
+					}
+				}*/
+				result.put("medal", rset.getString(4));
                 results.add(result);
             }
+            rset.close();
+            conn.close();
+
+			return results;
         } catch (Exception e) {
             throw new OlympicsDBException("Error getting results of this event", e);
         }
 
-        return results;
+
     }
 
 
@@ -393,6 +415,8 @@ public class DatabaseBackend {
 		ArrayList<HashMap<String,Object>> bookings = new ArrayList<HashMap<String,Object>>();
 		Statement stmt = null;
 		try {
+
+
 			Connection conn = getConnection();
 			stmt = conn.createStatement();
 			ResultSet rset = stmt.executeQuery(
@@ -407,11 +431,15 @@ public class DatabaseBackend {
 			booking.put("when_departs", new Date());
 			booking.put("when_arrives", new Date());
 			bookings.add(booking);
+
+			reallyClose(conn);
+			return bookings;
 		} catch (Exception e) {
 			throw new OlympicsDBException("Error getting member bookings", e);
 		}
 
-		return bookings;
+
+
 
 //        // FIXME: DUMMY FUNCTION NEEDS TO BE PROPERLY IMPLEMENTED
 //        HashMap<String,Object> bookingex1 = new HashMap<String,Object>();
