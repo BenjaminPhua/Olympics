@@ -114,18 +114,7 @@ public class DatabaseBackend {
      */
     public HashMap<String, Object> getMemberDetails(String memberID) throws OlympicsDBException {
     	 // FIXME: REPLACE FOLLOWING LINES WITH REAL OPERATION
-    	/*
     	HashMap<String, Object> details = new HashMap<String, Object>();
-		
-    	String title = "";
-		String first_name = "";
-		String family_name = "";
-		String country_name = "";
-		String residence = "";
-    	String member_type =  "";
-		String num_booking = "";
-		
-		// TODO --> Turn into one query that checks all of them out
 		
 		String memberDetails = "SELECT * " +
 								"FROM member " +
@@ -137,12 +126,12 @@ public class DatabaseBackend {
 		String memberType = "SELECT " +
 									"CASE WHEN member.member_id = athlete.member_id THEN 'athlete' " +
 									 "WHEN member.member_id = staff.member_id THEN 'staff' " +
-									 "WHEN member.member_id = official.member_id THEN 'offical' " +
+									 "WHEN member.member_id = official.member_id THEN 'official' " +
 									 "END as member_type " +
 						     "FROM member " +
-						     				"LEFT OUTER JOIN olympics.athlete USING (member_id) "
-						     				+ "LEFT OUTER JOIN olympics.staff USING (member_id) "
-						     				+ "LEFT OUTER JOIN olympics.official USING (member_id) "
+						     				"LEFT OUTER JOIN athlete USING (member_id) "
+						     				+ "LEFT OUTER JOIN staff USING (member_id) "
+						     				+ "LEFT OUTER JOIN official USING (member_id) "
 						     + "WHERE member.member_id = ? ;";
 		
 		String Bookings = "SELECT COUNT(*) as num_bookings "
@@ -155,68 +144,65 @@ public class DatabaseBackend {
 		
 		 Connection conn = null;
 	     PreparedStatement stmt = null;
-	     PreparedStatement aset = null;
-	     PreparedStatement numset = null;
+	     PreparedStatement stmt1 = null;
+	     PreparedStatement stmt2 = null;
+	     PreparedStatement stmt3 = null;
     	
     	try {
     		 conn = getConnection();
              stmt = conn.prepareStatement(memberDetails.toString());
-             aset = conn.prepareStatement(memberType.toString());
-             numset = conn.prepareStatement(Bookings.toString());
+             stmt1 = conn.prepareStatement(memberType.toString());
+             stmt2 = conn.prepareStatement(Bookings.toString());
+             stmt3 = conn.prepareStatement(medals.toString());
              stmt.setString(1, memberID);
+             stmt1.setString(1, memberID);
+             stmt2.setString(1, memberID);
+             stmt3.setString(1, memberID);
+
              ResultSet rset = stmt.executeQuery();
-             
-//			conn = getConnection();
-//			Statement stmt = conn.createStatement();
-////			 ResultSet rset = stmt.executeQuery("SELECT * FROM member JOIN country USING (country_code) JOIN accommodation ON (accommodation = place_id) JOIN place USING (place_id) WHERE member_id='"+memberID+"';");
-//			 ResultSet rset = stmt.executeQuery("SELECT * " +
-//												"FROM olympics.member " +
-//													"JOIN olympics.country USING (country_code) "+
-//													"JOIN olympics.accommodation ON (accommodation = place_id) " + 
-//													"JOIN olympics.place USING (place_id) " + 
-//													"WHERE member_id='"+memberID+"';");
+           
 			while(rset.next()){
-				 title = rset.getString("title");
-     			 first_name = rset.getString("given_names");
-     			 family_name = rset.getString("family_name");
-     			 country_name = rset.getString("country_name");
-     			 residence = rset.getString("place_name");
+				details.put("member_id", memberID);
+     			details.put("title", rset.getString("title"));
+     	    	details.put("first_name", rset.getString("given_names"));
+     	    	details.put("family_name", rset.getString("family_name"));
+     	    	details.put("country_name", rset.getString("country_name"));
+     	    	details.put("residence", rset.getString("place_name"));
 			 }
-			
-//  			ResultSet aset = stmt.executeQuery("SELECT CASE WHEN member.member_id = athlete.member_id THEN 'athlete' WHEN member.member_id = staff.member_id THEN 'staff' WHEN member.member_id = official.member_id THEN 'offical' END as member_type FROM member LEFT OUTER JOIN olympics.athlete USING (member_id) LEFT OUTER JOIN olympics.staff USING (member_id) LEFT OUTER JOIN olympics.official USING (member_id) WHERE member.member_id='"+memberID+"';");
+			 ResultSet aset = stmt1.executeQuery();
+
  			while(aset.next()){
- 				member_type = aset.getString("member_type");
+ 				details.put("member_type", aset.getString("member_type"));
+ 				//details.put("member_type", aset.getString("member_type"));
+ 				
  			}
- 			
-// 			ResultSet numset = stmt.executeQuery("SELECT COUNT(*) as num_bookings FROM booking WHERE booked_for LIKE'"+memberID+"';");
+            ResultSet numset = stmt2.executeQuery();
+
  			while (numset.next()){
- 				num_booking = numset.getString("num_bookings");
+ 				details.put("num_bookings", numset.getInt("num_bookings"));
  			}
- 			
- 			details.put("member_id", memberID);
- 	    	details.put("member_type", member_type);
- 	    	details.put("title", title);
- 	    	details.put("first_name", first_name);
- 	    	details.put("family_name", family_name);
- 	    	details.put("country_name", country_name);
- 	    	details.put("residence", residence);
- 	    	details.put("member_type", member_type);
- 	    	details.put("num_bookings", num_booking);
- 			
- 			ResultSet athset = stmt.executeQuery("SELECT COUNT(medal = 'G') as gold, COUNT(medal = 'S') as silver, COUNT(medal = 'B') as bronze FROM participates WHERE athlete_id ='"+memberID+"';");
- 	 		while (athset.next()){
- 	 			details.put("num_gold", athset.getString("gold"));
- 	 		    details.put("num_silver", athset.getString("silver"));
- 	 		    details.put("num_bronze", athset.getString("bronze"));	
- 	 		}	 
-		} catch (SQLException e) {
+ 			if(details.get("member_type").equals("staff") || details.get("member_type").equals("official")){
+ 				 details.put("num_gold", null);
+	 	 		 details.put("num_silver", null);
+	 	 		 details.put("num_bronze", null);	
+ 			}
+ 			else{
+ 	 			ResultSet athset = stmt3.executeQuery();
+ 	 			while (athset.next()){
+ 		 	 	 	 details.put("num_gold", athset.getInt("gold"));
+ 		 	 		 details.put("num_silver", athset.getInt("silver"));
+ 		 	 		 details.put("num_bronze", athset.getInt("bronze"));	
+ 		 	 	}
+ 			}
+
+
+    } catch (SQLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
         
-        return details;
-        */
-    	return new HashMap<String, Object>();
+        return details; 
+    	//return new HashMap<String, Object>();
     }
 
 
