@@ -278,34 +278,62 @@ public class DatabaseBackend {
 
 			ArrayList<HashMap<String, Object>> results = new ArrayList<>();
 
+            StringBuffer individual = new StringBuffer();
+            individual.append("SELECT family_name, given_names, country_name, medal ");
+			individual.append("FROM participates P JOIN member M ON (athlete_id = member_id) JOIN country C ON (M.country_code = C.country_code) ");
+			individual.append("WHERE event_id = ? ORDER BY family_name ");
 
-            StringBuffer stringBuffer = new StringBuffer();
-            stringBuffer.append("SELECT given_names, family_name, country_name, medal ");
-			stringBuffer.append("FROM participates JOIN member ON (athlete_id = member_id) JOIN country WHERE (country_code) ");
-			stringBuffer.append("WHERE event_id = ? ");
+			PreparedStatement stmt_individual = conn.prepareStatement(individual.toString());
+			stmt_individual.setInt(1, eventId);
+			ResultSet rs_individual = stmt_individual.executeQuery();
 
-			PreparedStatement stmt = conn.prepareStatement(stringBuffer.toString());
-			stmt.setInt(1, eventId);
-			ResultSet rset = stmt.executeQuery();
+			StringBuffer team = new StringBuffer();
+			team.append("SELECT team_name, country_name, medal ");
+			team.append("FROM team T JOIN country C ON (T.country_code = C.country_code) ");
+			team.append("WHERE event_id = ? GROUP BY team_name, country_name, medal ORDER BY team_name");
 
-            while (rset.next()) {
+			PreparedStatement stmt_team = conn.prepareStatement(team.toString());
+			stmt_team.setInt(1, eventId);
+			ResultSet rs_team = stmt_team.executeQuery();
+
+            while (rs_individual.next()) {
                 HashMap<String,Object> result = new HashMap<>();
-                result.put("participant", rset.getString(1) + ", " + rset.getString(2));
-                result.put("country_name", rset.getString(3));
+                result.put("participant", rs_individual.getString(1) + ", " + rs_individual.getString(2));
+                result.put("country_name", rs_individual.getString(3));
                 String medal = null;
-                /*if (rset.getString(4) != null) {
-					if (rset.getString(4).equals("G")) {
+                if (rs_individual.getString(4) != null) {
+					if (rs_individual.getString(4).equals("G")) {
 						medal = "Gold";
-					} else if (rset.getString(4).equals("S")) {
+					} else if (rs_individual.getString(4).equals("S")) {
 						medal = "Silver";
-					} else if (rset.getString(4).equals("B")) {
+					} else if (rs_individual.getString(4).equals("B")) {
 						medal = "Bronze";
 					}
-				}*/
-				result.put("medal", rset.getString(4));
+				}
+				result.put("medal", medal);
                 results.add(result);
             }
-            rset.close();
+
+			while (rs_team.next()) {
+				HashMap<String,Object> result = new HashMap<>();
+				result.put("participant", rs_team.getString(1));
+				result.put("country_name", rs_team.getString(2));
+				String medal = null;
+				if (rs_team.getString(3) != null) {
+					if (rs_team.getString(3).equals("G")) {
+						medal = "Gold";
+					} else if (rs_team.getString(3).equals("S")) {
+						medal = "Silver";
+					} else if (rs_team.getString(3).equals("B")) {
+						medal = "Bronze";
+					}
+				}
+				result.put("medal", medal);
+				results.add(result);
+			}
+
+            rs_individual.close();
+            rs_team.close();
             conn.close();
 
 			return results;
