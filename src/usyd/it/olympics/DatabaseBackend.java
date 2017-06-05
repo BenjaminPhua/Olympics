@@ -782,37 +782,6 @@ public class DatabaseBackend {
     	* Users can browse a specific journey, including details for when the booking was
     	* made and by whom
     	* */
-
-		/*
-		HashMap<String,Object> booking = null;
-		Connection conn = null;
-		Statement stmt = null;
-		try {
-			conn = getConnection();
-			stmt = conn.createStatement();
-			ResultSet rset = stmt.executeQuery(
-					"SELECT * " +
-							"FROM bookings JOIN journey ON (journey_id) JOIN member WHERE (athlete_id = member_id) " +
-							"WHERE booked_for = '" + memberID + "' AND journey_id = '" + journeyId + "' " +
-							"ORDER BY depart_time;");
-			rset.next();
-			booking = new HashMap<String,Object>();
-			booking.put("journey_id", rset.getInt("journey_id")); //convert to Object???
-			booking.put("vehicle_code", rset.getString(("vehicle_code"))); //char(8()
-			booking.put("when_departs", new Date());
-			booking.put("dest_name", "Olympic Park"); //need to join with olympics.place
-			booking.put("origin_name", "SIT"); //need to join with olympics.place
-			booking.put("bookedby_name", rset.getString("title") + " " + rset.getString("family_name"));
-			booking.put("bookedfor_name", rset.getString("given_names") + " " + rset.getString("family_name"));
-			booking.put("when_booked", new Date());
-			booking.put("when_arrives", new Date());
-
-		} catch (Exception e) {
-			reallyClose(conn);
-			e.printStackTrace();
-			throw new OlympicsDBException("Error getting member bookings", e);
-		} return booking;
-		*/
 		
     	Connection conn = null;
     	
@@ -823,7 +792,14 @@ public class DatabaseBackend {
     		// A000024883
     		// 3
     		StringBuffer stringBuffer = new StringBuffer();
-    		stringBuffer.append("SELECT journey_id, vehicle_code, depart_time, T.place_name AS to_place_name, F.place_name AS from_place_name, BB.title AS booked_by_title, BB.family_name AS booked_by_family_name, BF.family_name AS booked_for_family_name, BF.given_names AS booked_for_given_names, when_booked, arrive_time ");
+    		stringBuffer.append("SELECT journey_id, vehicle_code, depart_time, ");
+    		stringBuffer.append("T.place_name AS to_place_name, ");
+    		stringBuffer.append("F.place_name AS from_place_name, ");
+    		stringBuffer.append("BB.family_name AS booked_by_family_name, ");
+    		stringBuffer.append("BB.given_names AS booked_by_given_names, ");
+    		stringBuffer.append("BF.family_name AS booked_for_family_name, ");
+    		stringBuffer.append("BF.given_names AS booked_for_given_names, ");
+    		stringBuffer.append("when_booked, arrive_time ");
     		stringBuffer.append("FROM (((((Booking JOIN Journey USING (journey_id))) ");
     		stringBuffer.append("JOIN Place F ON (from_place = F.place_id)) ");
     		stringBuffer.append("JOIN Place T ON (to_place = T.place_id)) ");
@@ -840,11 +816,12 @@ public class DatabaseBackend {
     			
     		if (rs.next()) {
 	    		booking.put("journey_id", Integer.valueOf(rs.getInt("journey_id")));
-	    		booking.put("vehicle_code", rs.getString("vehicle_code"));
+	    		booking.put("vehicle", rs.getString("vehicle_code"));
+	    		//booking.put("vehicle_code", rs.getString("vehicle_code"));
 	    		booking.put("when_departs", new Date(rs.getTimestamp("depart_time").getTime()));
 	    		booking.put("dest_name", rs.getString("to_place_name"));
 	    		booking.put("origin_name", rs.getString("from_place_name"));
-	    		booking.put("bookedby_name", rs.getString("booked_by_title") + " " + rs.getString("booked_by_family_name"));
+	    		booking.put("bookedby_name", rs.getString("booked_by_family_name") + ", " + rs.getString("booked_by_given_names"));
 	    		booking.put("bookedfor_name", rs.getString("booked_for_family_name") + ", " + rs.getString("booked_for_given_names"));
 	    		booking.put("when_booked", new Date(rs.getTimestamp("when_booked").getTime()));
 	    		booking.put("when_arrives", new Date(rs.getTimestamp("arrive_time").getTime()));
