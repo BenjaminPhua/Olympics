@@ -21,6 +21,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Properties;
@@ -369,10 +370,10 @@ public class DatabaseBackend {
     		// 5
     		// 2017
     		StringBuffer stringBuffer = new StringBuffer();
-    		stringBuffer.append("SELECT journey_id, vehicle_code, F.place_name, T.place_name, depart_time, arrive_time, capacity - nbooked AS available_seats ");
+    		stringBuffer.append("SELECT journey_id, vehicle_code, F.place_name AS origin_name, T.place_name AS dest_name, depart_time, arrive_time, capacity - nbooked AS available_seats ");
     		stringBuffer.append("FROM ((Journey NATURAL JOIN Vehicle) JOIN Place F ON (from_place=F.place_id)) JOIN Place T ON (to_place=T.place_id) ");
-    		stringBuffer.append("WHERE F.address = ? AND ");
-    		stringBuffer.append("T.address = ? AND ");
+    		stringBuffer.append("WHERE F.place_name = ? AND ");
+    		stringBuffer.append("T.place_name = ? AND ");
     		stringBuffer.append("EXTRACT(DAY FROM depart_time) = ? AND ");
     		stringBuffer.append("EXTRACT(MONTH FROM depart_time) = ? AND ");
     		stringBuffer.append("EXTRACT(YEAR FROM depart_time) = ? ");
@@ -391,13 +392,13 @@ public class DatabaseBackend {
     			
     			HashMap<String, Object> journey = new HashMap<>();
     			
-    			journey.put("journey_id", Integer.valueOf(rs.getInt(1)));
-    			journey.put("vehicle_code", rs.getString(2));
-    			journey.put("origin_name", rs.getString(3));
-    			journey.put("dest_name", rs.getString(4));
-    			journey.put("when_departs", rs.getTimestamp(5));
-    			journey.put("when_arrives", rs.getTimestamp(6));
-    			journey.put("available_seats", Integer.valueOf(rs.getInt(7)));
+    			journey.put("journey_id", Integer.valueOf(rs.getInt("journey_id")));
+    			journey.put("vehicle_code", rs.getString("vehicle_code"));
+    			journey.put("origin_name", rs.getString("origin_name"));
+    			journey.put("dest_name", rs.getString("dest_name"));
+    			journey.put("when_departs", new Date(rs.getTimestamp("depart_time").getTime()));
+    			journey.put("when_arrives", new Date(rs.getTimestamp("arrive_time").getTime()));
+    			journey.put("available_seats", Integer.valueOf(rs.getInt("available_seats")));
     			
     			journeys.add(journey);
     			
