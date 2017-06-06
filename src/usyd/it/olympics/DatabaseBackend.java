@@ -249,12 +249,10 @@ public class DatabaseBackend {
 						     + "WHERE member.member_id = ? ;";
 		
 		String Bookings = "SELECT COUNT(*) as num_bookings "
-						+ "FROM booking WHERE booked_for = ? ;";
+						+ "FROM booking WHERE booked_for LIKE ? ;";
 		
-		String medals = "SELECT COUNT(medal = 'G') as gold, "
-				             + "COUNT(medal = 'S') as silver, "
-				             + "COUNT(medal = 'B') as bronze "
-				      + "FROM participates WHERE athlete_id = ? ;";
+		String medals = "SELECT medal "
+			      + "FROM participates WHERE athlete_id LIKE ? AND medal LIKE '_';";
 		
 		 Connection conn = null;
 	     PreparedStatement stmt = null;
@@ -302,11 +300,23 @@ public class DatabaseBackend {
  			}
  			else{
  	 			ResultSet athset = stmt3.executeQuery();
+ 	 			int gold = 0;
+ 	 			int silver = 0;
+ 	 			int bronze = 0;
  	 			while (athset.next()){
- 		 	 	 	 details.put("num_gold", athset.getInt("gold"));
- 		 	 		 details.put("num_silver", athset.getInt("silver"));
- 		 	 		 details.put("num_bronze", athset.getInt("bronze"));	
+ 	 				if(athset.getString(1).equals("G")){
+	 	 					gold++;
+	 	 				}
+	 					else if(athset.getString(1).equals("S")){
+	 	 					silver++;
+	 	 				}
+	 					else if(athset.getString(1).equals("B")){
+	 	 					bronze++;
+	 	 				}
  		 	 	}
+ 	 			details.put("num_gold", gold);
+		 	 	details.put("num_silver", silver);
+		 	 	details.put("num_bronze", bronze);
  			}
 
 			conn.close();
