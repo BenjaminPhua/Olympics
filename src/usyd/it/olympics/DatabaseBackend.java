@@ -302,43 +302,47 @@ public class DatabaseBackend {
  			while (numset.next()){
  				details.put("num_bookings", numset.getInt("num_bookings"));
  			}
- 			if(details.get("member_type").equals("staff") || details.get("member_type").equals("official")){
- 				 details.put("num_gold", null);
-	 	 		 details.put("num_silver", null);
-	 	 		 details.put("num_bronze", null);
- 			}
- 			else{
- 	 			ResultSet athset = stmt3.executeQuery();
- 	 			int gold = 0;
- 	 			int silver = 0;
- 	 			int bronze = 0;
- 	 			while (athset.next()){
- 	 				if(athset.getString(1).equals("G")){
-	 	 					gold++;
-					} else if(athset.getString(1).equals("S")){
-						silver++;
-					} else if(athset.getString(1).equals("B")){
-						bronze++;
+ 			if (details.get("member_type") == null) {
+				details.put("num_gold", null);
+				details.put("num_silver", null);
+				details.put("num_bronze", null);
+ 			} else {
+				if (details.get("member_type").equals("staff") || details.get("member_type").equals("official")) {
+					details.put("num_gold", null);
+					details.put("num_silver", null);
+					details.put("num_bronze", null);
+				} else {
+					ResultSet athset = stmt3.executeQuery();
+					int gold = 0;
+					int silver = 0;
+					int bronze = 0;
+					while (athset.next()) {
+						if (athset.getString(1).equals("G")) {
+							gold++;
+						} else if (athset.getString(1).equals("S")) {
+							silver++;
+						} else if (athset.getString(1).equals("B")) {
+							bronze++;
+						}
 					}
- 		 	 	}
 
-				ResultSet athset_team = stmt4.executeQuery();
+					ResultSet athset_team = stmt4.executeQuery();
 
-				while (athset_team.next()){
-					if(athset_team.getString(1).equals("G")){
-						gold++;
-					} else if(athset_team.getString(1).equals("S")){
-						silver++;
-					} else if(athset_team.getString(1).equals("B")){
-						bronze++;
+					while (athset_team.next()) {
+						if (athset_team.getString(1).equals("G")) {
+							gold++;
+						} else if (athset_team.getString(1).equals("S")) {
+							silver++;
+						} else if (athset_team.getString(1).equals("B")) {
+							bronze++;
+						}
 					}
+
+					details.put("num_gold", gold);
+					details.put("num_silver", silver);
+					details.put("num_bronze", bronze);
 				}
-
- 	 			details.put("num_gold", gold);
-		 	 	details.put("num_silver", silver);
-		 	 	details.put("num_bronze", bronze);
- 			}
-
+			}
 			conn.close();
 
 		} catch (SQLException e) {
@@ -831,8 +835,7 @@ public class DatabaseBackend {
 		ResultSet rs = stmt.executeQuery();
 		rs.next();
 		boolean isStaff = rs.getBoolean(1);
-		
-		rs.close();
+
 		return isStaff;
     	
     }
@@ -880,7 +883,7 @@ public class DatabaseBackend {
 		
 		rs.close();
 		return journeyId;
-    	
+
     }
     
     private void reallyRollback(Connection conn) {
@@ -1062,19 +1065,19 @@ public class DatabaseBackend {
     	String port = props.getProperty("port");
     	String dbname = props.getProperty("dbname");
     	String server = props.getProperty("address");;
-    	
+
         // Load JDBC driver and setup connection details
     	String vendor = props.getProperty("dbvendor");
 		if(vendor==null) {
     		throw new OlympicsDBException("No vendor config data");
-    	} else if ("postgresql".equals(vendor)) { 
+    	} else if ("postgresql".equals(vendor)) {
     		Class.forName("org.postgresql.Driver");
     		connstring = "jdbc:postgresql://" + server + ":" + port + "/" + dbname;
     	} else if ("oracle".equals(vendor)) {
     		Class.forName("oracle.jdbc.driver.OracleDriver");
     		connstring = "jdbc:oracle:thin:@" + server + ":" + port + ":" + dbname;
     	} else throw new OlympicsDBException("Unknown database vendor: " + vendor);
-		
+
 		// test the connection
 		Connection conn = null;
 		try {
