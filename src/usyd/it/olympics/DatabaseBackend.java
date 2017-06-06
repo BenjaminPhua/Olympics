@@ -106,15 +106,128 @@ public class DatabaseBackend {
 
     /**
      * Obtain details for the current memberID
-     * @param memberID 
+     * @param memberId 
      * @param member_type 
      *
      *
      * @return text to be displayed in the home screen
      * @throws OlympicsDBException
      */
-    public HashMap<String, Object> getMemberDetails(String memberID) throws OlympicsDBException {
+    public HashMap<String, Object> getMemberDetails(String memberId) throws OlympicsDBException {
     	 // FIXME: REPLACE FOLLOWING LINES WITH REAL OPERATION
+    	
+    	/*
+    	HashMap<String, Object> details = new HashMap<String, Object>();
+    	
+    	--details.put("member_id", memberID);
+    	--details.put("member_type", "athlete");
+    	--details.put("title", "Mr");
+    	--details.put("first_name", "Potato");
+    	--details.put("family_name", "Head");
+    	--details.put("country_name", "Australia");
+    	--details.put("residence", "SIT");
+    	details.put("num_bookings", Integer.valueOf(20));
+    	
+    	// Some attributes fetched may depend upon member_type
+    	// This is for an athlete
+    	details.put("num_gold", Integer.valueOf(5));
+    	details.put("num_silver", Integer.valueOf(4));
+    	details.put("num_bronze", Integer.valueOf(1));
+    	*/
+    	
+    	/*
+    	Connection conn = null;
+    	
+    	try {
+    		
+    		conn = getConnection();
+
+    		//A000024883
+    		HashMap<String, Object> details = new HashMap<>();
+    		
+    		// Get most details.
+    		StringBuffer stringBuffer = new StringBuffer();
+    		stringBuffer.append("SELECT member_id, title, given_names, ");
+    		stringBuffer.append("family_name, country_name, place_name, ");
+    		stringBuffer.append("CASE ");
+    		stringBuffer.append("WHEN member.member_id = athlete.member_id THEN 'athlete' "); 
+    		stringBuffer.append("WHEN member.member_id = staff.member_id THEN 'staff' "); 
+    		stringBuffer.append("WHEN member.member_id = official.member_id THEN 'official' "); 
+    		stringBuffer.append("END as member_type ");
+    		stringBuffer.append("FROM (Member JOIN Country USING (country_code)) ");
+    		stringBuffer.append("JOIN Place ON (accommodation = place_id) ");
+    		stringBuffer.append("LEFT OUTER JOIN athlete USING (member_id) ");
+    		stringBuffer.append("LEFT OUTER JOIN staff USING (member_id) ");
+    		stringBuffer.append("LEFT OUTER JOIN official USING (member_id) ");
+    		stringBuffer.append("WHERE member_id = ? ");
+    		
+    		PreparedStatement stmt = conn.prepareStatement(stringBuffer.toString());
+    		stmt.setString(1, memberId);
+    		ResultSet rs = stmt.executeQuery();
+    		
+    		rs.next();
+    			
+    		details.put("member_id", rs.getString("member_id"));
+    		details.put("title", rs.getString("title"));
+    		details.put("first_name", rs.getString("given_names"));
+    		details.put("family_name", rs.getString("family_name"));
+    		details.put("country_name", rs.getString("country_name"));
+    		details.put("residence", rs.getString("place_name"));
+    		details.put("member_type", rs.getString("member_type"));
+    		
+    		boolean isAthelete = rs.getString("member_type").equals("athlete");
+    			
+    		rs.close();
+    		
+    		// Get num_bookings.
+    		stringBuffer = new StringBuffer();
+    		stringBuffer.append("SELECT COUNT(*) ");
+    		stringBuffer.append("FROM Booking ");
+    		stringBuffer.append("WHERE booked_for = ? ");
+    		
+    		stmt = conn.prepareStatement(stringBuffer.toString());
+    		stmt.setString(1, memberId);
+    		rs = stmt.executeQuery();
+    		
+    		rs.next();
+    		
+    		details.put("num_bookings", rs.getInt(1));
+    		
+    		rs.close();
+    		
+    		// Get athelete details.
+    		if (isAthelete) {
+    			
+    			stringBuffer = new StringBuffer();
+    			stringBuffer.append("SELECT COUNT(medal = 'G') AS num_gold, ");
+    			stringBuffer.append("COUNT(medal = 'S') AS num_silver, ");
+    			stringBuffer.append("COUNT(medal = 'B') AS num_bronze ");
+    			stringBuffer.append("FROM participates ");
+    			stringBuffer.append("WHERE athlete_id = ? ");
+    			
+    			stmt = conn.prepareStatement(stringBuffer.toString());
+    			stmt.setString(1, memberId);
+    			rs = stmt.executeQuery();
+    			
+    			rs.next();
+    			
+    			details.put("num_gold", rs.getInt("num_gold"));
+    			details.put("num_silver", rs.getInt("num_silver"));
+    			details.put("num_bronze", rs.getInt("num_bronze"));
+    			
+    			rs.close();
+    			
+    		}
+    		
+    		return details;
+    		
+    	} catch (Exception e) {
+            throw new OlympicsDBException("Error getting member details", e);
+    	} finally {
+    		reallyClose(conn);
+    	}
+    	*/
+    	
     	HashMap<String, Object> details = new HashMap<String, Object>();
 		
 		String memberDetails = "SELECT * " +
@@ -155,15 +268,15 @@ public class DatabaseBackend {
              stmt1 = conn.prepareStatement(memberType.toString());
              stmt2 = conn.prepareStatement(Bookings.toString());
              stmt3 = conn.prepareStatement(medals.toString());
-             stmt.setString(1, memberID);
-             stmt1.setString(1, memberID);
-             stmt2.setString(1, memberID);
-             stmt3.setString(1, memberID);
+             stmt.setString(1, memberId);
+             stmt1.setString(1, memberId);
+             stmt2.setString(1, memberId);
+             stmt3.setString(1, memberId);
 
              ResultSet rset = stmt.executeQuery();
            
 			while(rset.next()){
-				details.put("member_id", memberID);
+				details.put("member_id", memberId);
      			details.put("title", rset.getString("title"));
      	    	details.put("first_name", rset.getString("given_names"));
      	    	details.put("family_name", rset.getString("family_name"));
@@ -203,8 +316,9 @@ public class DatabaseBackend {
 				e.printStackTrace();
 			}
 
-			return details;
-			//return new HashMap<String, Object>();
+		return details;
+		//return new HashMap<String, Object>();
+		
     }
 
 
