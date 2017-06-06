@@ -434,13 +434,73 @@ public class DatabaseBackend {
     	
     }
 
-	ArrayList<HashMap<String,Object>> getMemberBookings(String memberID) throws OlympicsDBException {
+	ArrayList<HashMap<String,Object>> getMemberBookings(String memberId) throws OlympicsDBException {
 
 		/**
 		 * Users can access a list of all their bookings, listed chronologically by the
 		 * trip start time (newest first).
 		 */
+		
+    	Connection conn = null;
+    	
+    	try {
+    		
+    		conn = getConnection();
+    		
+    		// A000032650
+    		StringBuffer stringBuffer = new StringBuffer();
+    		stringBuffer.append("SELECT journey_id, vehicle_code, ");
+    		stringBuffer.append("F.place_name AS from_place_name, ");
+    		stringBuffer.append("T.place_name AS to_place_name, ");
+    		stringBuffer.append("depart_time, arrive_time ");
+    		stringBuffer.append("FROM ((Booking JOIN Journey USING (journey_id)) ");
+    		stringBuffer.append("JOIN Place F ON (from_place = F.place_id)) ");
+    		stringBuffer.append("JOIN Place T ON (to_place = T.place_id) ");
+    		stringBuffer.append("WHERE booked_for = ? ");
+    		stringBuffer.append("ORDER BY depart_time ");
 
+    		
+    		PreparedStatement stmt = conn.prepareStatement(stringBuffer.toString());
+    		stmt.setString(1, memberId);
+    		ResultSet rs = stmt.executeQuery();
+    		
+    		ArrayList<HashMap<String, Object>> bookings = new ArrayList<>();
+    		
+    		while (rs.next()) {
+    		
+    			HashMap<String, Object> booking = new HashMap<>();
+    			
+//    	        HashMap<String,Object> bookingex1 = new HashMap<String,Object>();
+//    	        bookingex1.put("journey_id", Integer.valueOf(17));
+//    	        bookingex1.put("vehicle_code", "XYZ124");
+//    	        bookingex1.put("origin_name", "SIT");
+//    	        bookingex1.put("dest_name", "Olympic Park");
+//    	        bookingex1.put("when_departs", new Date());
+//    	        bookingex1.put("when_arrives", new Date());
+//    	        bookings.add(bookingex1);
+    			
+    			booking.put("journey_id", Integer.valueOf(rs.getInt("journey_id")));
+    			booking.put("vehicle_code", rs.getString("vehicle_code"));
+    			booking.put("origin_name", rs.getString("from_place_name"));
+    			booking.put("dest_name", rs.getString("to_place_name"));
+    			booking.put("when_departs", new Date(rs.getTimestamp("depart_time").getTime()));
+    			booking.put("when_arrives", new Date(rs.getTimestamp("arrive_time").getTime()));
+    			
+    			bookings.add(booking);
+    		
+    		}
+    			
+    		rs.close();
+    		
+    		return bookings;
+    		
+    	} catch (Exception e) {
+            throw new OlympicsDBException("Error finding journey", e);
+    	} finally {
+    		reallyClose(conn);
+    	}
+
+		/*
 		ArrayList<HashMap<String,Object>> bookings = new ArrayList<HashMap<String,Object>>();
 		Statement stmt = null;
 		try {
@@ -466,6 +526,7 @@ public class DatabaseBackend {
 		} catch (Exception e) {
 			throw new OlympicsDBException("Error getting member bookings", e);
 		}
+		*/
 
 
 
