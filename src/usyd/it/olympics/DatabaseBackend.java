@@ -98,9 +98,11 @@ public class DatabaseBackend {
         			details.put("member_type", rset.getString("member_type"));
         		}
         	};
+        	conn.close();
         } catch (Exception e) {
             throw new OlympicsDBException("Error checking login details", e);
         }
+        
         return details;
     }
 
@@ -530,6 +532,7 @@ public class DatabaseBackend {
     		
     		rs.close();
     		reallyClose(conn);
+    		conn.close();
     		
     		return journeys;
     		
@@ -615,6 +618,7 @@ public class DatabaseBackend {
     		}
     			
     		rs.close();
+    		conn.close();
     		
     		return bookings;
     		
@@ -715,6 +719,7 @@ public class DatabaseBackend {
     		}
     			
     		rs.close();
+    		conn.close();
     		
     		return journey;
     		
@@ -821,7 +826,7 @@ public class DatabaseBackend {
 			
 			return booking;
 			*/
-			
+			conn.close();
 			return getBookingDetails(forMember, journeyId);
 			
 		} catch (SQLException e) {
@@ -1014,7 +1019,7 @@ public class DatabaseBackend {
     		}
     			
     		rs.close();
-    		
+    		conn.close();
     		return booking;
     		
     	} catch (Exception e) {
@@ -1061,6 +1066,7 @@ public class DatabaseBackend {
 				 sport.put("discipline",  rset.getString("discipline"));
 				 sports.add(sport);
 			 }
+			 conn.close();
 		}
 		catch (SQLException e) {
 			// TODO Auto-generated catch block
