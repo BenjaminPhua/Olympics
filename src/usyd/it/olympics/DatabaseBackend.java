@@ -253,25 +253,32 @@ public class DatabaseBackend {
 		String Bookings = "SELECT COUNT(*) as num_bookings "
 						+ "FROM booking WHERE booked_for LIKE ? ;";
 		
-		String medals = "SELECT medal "
-			      + "FROM participates WHERE athlete_id LIKE ? AND medal LIKE '_';";
-		
+		String medals = "SELECT P.medal "
+			      + "FROM participates P WHERE athlete_id LIKE ? AND medal LIKE '_';";
+
+		String medals_team = "SELECT medal "
+				+ "FROM teammember M JOIN team T ON (M.team_name = T.team_name AND M.event_id = T.event_id) " +
+				"WHERE athlete_id LIKE ? AND medal LIKE '_';";
+
 		 Connection conn = null;
 	     PreparedStatement stmt = null;
 	     PreparedStatement stmt1 = null;
 	     PreparedStatement stmt2 = null;
 	     PreparedStatement stmt3 = null;
+		PreparedStatement stmt4 = null;
     	
     	try {
     		 conn = getConnection();
              stmt = conn.prepareStatement(memberDetails.toString());
              stmt1 = conn.prepareStatement(memberType.toString());
              stmt2 = conn.prepareStatement(Bookings.toString());
-             stmt3 = conn.prepareStatement(medals.toString());
+			stmt3 = conn.prepareStatement(medals.toString());
+			stmt4 = conn.prepareStatement(medals_team.toString());
              stmt.setString(1, memberId);
              stmt1.setString(1, memberId);
              stmt2.setString(1, memberId);
              stmt3.setString(1, memberId);
+			stmt4.setString(1, memberId);
 
              ResultSet rset = stmt.executeQuery();
            
@@ -298,7 +305,7 @@ public class DatabaseBackend {
  			if(details.get("member_type").equals("staff") || details.get("member_type").equals("official")){
  				 details.put("num_gold", null);
 	 	 		 details.put("num_silver", null);
-	 	 		 details.put("num_bronze", null);	
+	 	 		 details.put("num_bronze", null);
  			}
  			else{
  	 			ResultSet athset = stmt3.executeQuery();
@@ -308,14 +315,25 @@ public class DatabaseBackend {
  	 			while (athset.next()){
  	 				if(athset.getString(1).equals("G")){
 	 	 					gold++;
-	 	 				}
-	 					else if(athset.getString(1).equals("S")){
-	 	 					silver++;
-	 	 				}
-	 					else if(athset.getString(1).equals("B")){
-	 	 					bronze++;
-	 	 				}
+					} else if(athset.getString(1).equals("S")){
+						silver++;
+					} else if(athset.getString(1).equals("B")){
+						bronze++;
+					}
  		 	 	}
+
+				ResultSet athset_team = stmt4.executeQuery();
+
+				while (athset_team.next()){
+					if(athset_team.getString(1).equals("G")){
+						gold++;
+					} else if(athset_team.getString(1).equals("S")){
+						silver++;
+					} else if(athset_team.getString(1).equals("B")){
+						bronze++;
+					}
+				}
+
  	 			details.put("num_gold", gold);
 		 	 	details.put("num_silver", silver);
 		 	 	details.put("num_bronze", bronze);
@@ -597,15 +615,6 @@ public class DatabaseBackend {
     		
     			HashMap<String, Object> booking = new HashMap<>();
     			
-//    	        HashMap<String,Object> bookingex1 = new HashMap<String,Object>();
-//    	        bookingex1.put("journey_id", Integer.valueOf(17));
-//    	        bookingex1.put("vehicle_code", "XYZ124");
-//    	        bookingex1.put("origin_name", "SIT");
-//    	        bookingex1.put("dest_name", "Olympic Park");
-//    	        bookingex1.put("when_departs", new Date());
-//    	        bookingex1.put("when_arrives", new Date());
-//    	        bookings.add(bookingex1);
-    			
     			booking.put("journey_id", Integer.valueOf(rs.getInt("journey_id")));
     			booking.put("vehicle_code", rs.getString("vehicle_code"));
     			booking.put("origin_name", rs.getString("from_place_name"));
@@ -627,58 +636,6 @@ public class DatabaseBackend {
     	} finally {
     		reallyClose(conn);
     	}
-
-		/*
-		ArrayList<HashMap<String,Object>> bookings = new ArrayList<HashMap<String,Object>>();
-		Statement stmt = null;
-		try {
-
-
-			Connection conn = getConnection();
-			stmt = conn.createStatement();
-			ResultSet rset = stmt.executeQuery(
-					"SELECT * " +
-							"FROM olympics.bookings JOIN olympics.journey ON (journey_id) JOIN olympics.place WHERE (from_place = place_id) JOIN olympics.place WHERE (to_place = place_id)" +
-							"WHERE booked_for = '" + memberID + "' ORDER BY depart_time;");
-			HashMap<String,Object> booking = new HashMap<String,Object>();
-			booking.put("journey_id", rset.getInt("journey_id")); //convert to Object???
-			booking.put("vehicle_code", rset.getString(("vehicle_code"))); //char(8()
-			booking.put("origin_name", "SIT"); //need to join with olympics.place
-			booking.put("dest_name", "Olympic Park"); //need to join with olympics.place
-			booking.put("when_departs", new Date());
-			booking.put("when_arrives", new Date());
-			bookings.add(booking);
-
-			reallyClose(conn);
-			return bookings;
-		} catch (Exception e) {
-			throw new OlympicsDBException("Error getting member bookings", e);
-		}
-		*/
-
-
-
-
-//        // FIXME: DUMMY FUNCTION NEEDS TO BE PROPERLY IMPLEMENTED
-//        HashMap<String,Object> bookingex1 = new HashMap<String,Object>();
-//        bookingex1.put("journey_id", Integer.valueOf(17));
-//        bookingex1.put("vehicle_code", "XYZ124");
-//        bookingex1.put("origin_name", "SIT");
-//        bookingex1.put("dest_name", "Olympic Park");
-//        bookingex1.put("when_departs", new Date());
-//        bookingex1.put("when_arrives", new Date());
-//        bookings.add(bookingex1);
-//
-//        HashMap<String,Object> bookingex2 = new HashMap<String,Object>();
-//        bookingex2.put("journey_id", Integer.valueOf(25));
-//        bookingex2.put("vehicle_code", "ABC789");
-//        bookingex2.put("origin_name", "Olympic Park");
-//        bookingex2.put("dest_name", "Sydney Airport");
-//        bookingex2.put("when_departs", new Date());
-//        bookingex2.put("when_arrives", new Date());
-//        bookings.add(bookingex2);
-
-
 	}
                 
     /**
